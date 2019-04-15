@@ -1,0 +1,7 @@
+apiVersion: appdynamics.com/v1alpha1
+kind: Clusteragent
+metadata:
+  name: example-clusteragent
+spec:
+  # Add fields here
+  size: 3
