@@ -55,25 +55,26 @@ Here is a more involved spec with imstrumentation rules
 
 ```
 apiVersion: appdynamics.com/v1alpha1
-kind: ClusterAgent
+kind: Clusteragent
 metadata:
-  name: K8s-Cluster-Agent
+  name: local-k8s
 spec:
-  controllerUrl: "http://455controllernossh-k8sbiqtest-eq2w7bwd.srv.ravcloud.com:8090"
-  appDJavaAttachImage: "appdynamics/java-agent-attach:4.5.5"  # override the default Java Agent image
-  appDDotNetAttachImage: "appdynamics/dotnet-agent-agent:1.1" # override the default .Net Core Agent image
-  nsToInstrument:  # whitelist namespaces for instrumentation
+  controllerUrl: ""
+  appDJavaAttachImage: "appdynamics/java-agent:latest"
+  appDDotNetAttachImage: "appdynamics/dotnet-core-agent:latest"
+  nsToInstrument:
     - dev
 	- ad-devops
-  instrumentRule: # define a specific instrumentation rule to test a new version of the Java image
+  instrumentRule:
 	- matchString: "client-api"
-	  namespaces
+	  namespaces:
+	    - prod
 	  appDAppLabel: "appName"
-	  #appDTierLabel: "tierName"
-	  #version: "appdynamics/java-agent:4.5.6"
-	  #tech: "java"
-	  #method: "mountenv"
-      #biq: "sidecar"
+	  appDTierLabel: "tierName"
+	  version: "appdynamics/java-agent:4.5.6"
+	  tech: "java"
+	  method: "mountEnv"
+      biq: "sidecar"
 ```
 	
 ### Required settings
