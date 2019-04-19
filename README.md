@@ -7,10 +7,6 @@ The Operator is implemented using OperatorSDK and uses Kubernetes API to maintai
 
 ## Operator deployment
 Create namespace for the operator and the ClusterAgent
-`kubectl create namespace appdynamics`
-
-Create secret. APPDYNAMICS_REST_API_CREDENTIALS is required
-`kubectl -n appdynamics create secret generic appd-clusteragent --from-literal=APPDYNAMICS_REST_API_CREDENTIALS=<username>@<account>:<password> --from-literal=APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY=<controller access key> --from-literal=APPDYNAMICS_EVENT_ACCESS_KEY=<events api key> 
 
 * Create namespace for AppDynamics components
   * Kubernetes
@@ -22,18 +18,20 @@ Create secret. APPDYNAMICS_REST_API_CREDENTIALS is required
   * The "api-user" key with the AppDynamics user account information is required. It needs to be in the following format <username>@<account>:<password>, e.g ` user@customer1:123 `. 
   * The other 2 keys, "controller-key" and "event-key", are optional. If not specified, they will be automatically created by the ClusterAgent
 
-`
+```
 kubectl -n appdynamics-infra create secret generic cluster-agent-secret \
 --from-literal=api-user="" \
 --from-literal=controller-key="" \
 --from-literal=event-key="" \
-`
+```
 
 * Update the image reference in the Operator deployment spec (deploy/operator.yaml). The default is "docker.io/appdynamics/cluster-agent-operator:latest".
 
 
 * Deploy the ClusterAgent
- `kubectl create -f deploy/`
+```
+kubectl create -f deploy/
+```
 
 
 ## ClusterAgent deployment

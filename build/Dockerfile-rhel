@@ -12,6 +12,3 @@ LABEL name="AppDynamics ClusterAgent Operator" \
 USER nobody
 
 ADD build/_output/bin/appdynamics-operator /usr/local/bin/appdynamics-operator
-
-RUN chgrp -R 0 /usr/local/bin/appdynamics-operator && \
-    chmod -R g=u /usr/local/bin/appdynamics-operator
