@@ -1,4 +1,4 @@
-FROM alpine:3.8
+FROM registry.access.redhat.com/rhel-atomic
 
 LABEL name="AppDynamics ClusterAgent Operator" \
       vendor="AppDynamics" \
@@ -9,8 +9,9 @@ LABEL name="AppDynamics ClusterAgent Operator" \
       description="The ClusterAgent monitors state of Kuberenetes resources and derives metrics to provide visibility into the following common application impacting issues."
 
 
-RUN apk upgrade --update --no-cache
-
 USER nobody
 
 ADD build/_output/bin/appdynamics-operator /usr/local/bin/appdynamics-operator
+
+RUN chgrp -R 0 /usr/local/bin/appdynamics-operator && \
+    chmod -R g=u /usr/local/bin/appdynamics-operator

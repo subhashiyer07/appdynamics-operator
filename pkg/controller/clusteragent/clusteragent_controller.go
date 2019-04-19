@@ -38,7 +38,7 @@ const (
 * business logic.  Delete these comments after modifying this file.*
  */
 
-// Add creates a new ClusterAgent Controller and adds it to the Manager. The Manager will set fields on the Controller
+// Add creates a new Clusteragent Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
 func Add(mgr manager.Manager) error {
 	return add(mgr, newReconciler(mgr))
@@ -46,7 +46,7 @@ func Add(mgr manager.Manager) error {
 
 // newReconciler returns a new reconcile.Reconciler
 func newReconciler(mgr manager.Manager) reconcile.Reconciler {
-	return &ReconcileClusterAgent{client: mgr.GetClient(), scheme: mgr.GetScheme()}
+	return &ReconcileClusteragent{client: mgr.GetClient(), scheme: mgr.GetScheme()}
 }
 
 // add adds a new Controller to mgr with r as the reconcile.Reconciler
@@ -57,16 +57,16 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 		return err
 	}
 
-	// Watch for changes to primary resource ClusterAgent
-	err = c.Watch(&source.Kind{Type: &appdynamicsv1alpha1.ClusterAgent{}}, &handler.EnqueueRequestForObject{})
+	// Watch for changes to primary resource Clusteragent
+	err = c.Watch(&source.Kind{Type: &appdynamicsv1alpha1.Clusteragent{}}, &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
 
-	// Watch for changes to secondary resource Deployment and requeue the owner ClusterAgent
+	// Watch for changes to secondary resource Deployment and requeue the owner Clusteragent
 	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
-		OwnerType:    &appdynamicsv1alpha1.ClusterAgent{},
+		OwnerType:    &appdynamicsv1alpha1.Clusteragent{},
 	})
 	if err != nil {
 		return err
@@ -75,24 +75,24 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	return nil
 }
 
-var _ reconcile.Reconciler = &ReconcileClusterAgent{}
+var _ reconcile.Reconciler = &ReconcileClusteragent{}
 
-// ReconcileClusterAgent reconciles a ClusterAgent object
-type ReconcileClusterAgent struct {
+// ReconcileClusteragent reconciles a Clusteragent object
+type ReconcileClusteragent struct {
 	// This client, initialized using mgr.Client() above, is a split client
 	// that reads objects from the cache and writes to the apiserver
 	client client.Client
 	scheme *runtime.Scheme
 }
 
-func (r *ReconcileClusterAgent) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.Result, error) {
 	reqLogger := log.WithValues("Request.Namespace", request.Namespace, "Request.Name", request.Name)
-	reqLogger.Info("Reconciling ClusterAgent...")
+	reqLogger.Info("Reconciling Clusteragent...")
 
-	// Fetch the ClusterAgent instance
-	clusterAgent := &appdynamicsv1alpha1.ClusterAgent{}
+	// Fetch the Clusteragent instance
+	clusterAgent := &appdynamicsv1alpha1.Clusteragent{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, clusterAgent)
-	reqLogger.Info("Retrieved cluster agent. Image: %s\n", clusterAgent.Spec.Image)
+	reqLogger.Info("Retrieved cluster agent.", "Image", clusterAgent.Spec.Image)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -123,7 +123,7 @@ func (r *ReconcileClusterAgent) Reconcile(request reconcile.Request) (reconcile.
 			reqLogger.Error(econfig, "Failed to create new Cluster Agent due to config map", "Deployment.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
 			return reconcile.Result{}, econfig
 		}
-		fmt.Printf("Creating service...\n")
+		reqLogger.Info("Creating service...\n")
 		_, esvc := r.ensureAgentService(clusterAgent)
 		if esvc != nil {
 			reqLogger.Error(esvc, "Failed to create new Cluster Agent due to service", "Deployment.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
@@ -155,65 +155,83 @@ func (r *ReconcileClusterAgent) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, errsecret
 	}
 
-	reqLogger.Info("Retrieving agent config map")
+	reqLogger.Info("Retrieving agent config map", "Deployment.Namespace", clusterAgent.Namespace)
 	cm, bag, econfig := r.ensureConfigMap(clusterAgent, secret, false)
 	if econfig != nil {
 		reqLogger.Error(econfig, "Failed to obtain cluster agent config map", "Deployment.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
 		return reconcile.Result{}, econfig
 	}
 
-	breaking, benign := r.hasBreakingChanges(clusterAgent, bag, secret)
-	if breaking || benign {
-		//update the configMap
-		errMap := r.updateMap(cm, clusterAgent, secret, false)
-		if errMap != nil {
-			return reconcile.Result{}, errMap
-		}
-	}
+	breaking, _ := r.hasBreakingChanges(clusterAgent, bag, secret)
+
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the cluster agent pod...")
 		errRestart := r.restartAgent(clusterAgent)
 		if errRestart != nil {
-			reqLogger.Error(errRestart, "Failed to restart cluster agent", "Deployment.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
+			reqLogger.Error(errRestart, "Failed to restart cluster agent", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
 			return reconcile.Result{}, errRestart
 		}
-	} else if benign {
-		reqLogger.Info("Benign changes detected. Updating config map...")
 	} else {
-		reqLogger.Info("No changes detected...")
-	}
-	if breaking || benign {
-		r.updateStatus(clusterAgent)
+		//update the configMap
+		reqLogger.Info("No breaking changed. Reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
+		errMap := r.updateMap(cm, clusterAgent, secret, false)
+		if errMap != nil {
+			reqLogger.Error(errMap, "Issues when reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
+			return reconcile.Result{}, errMap
+		} else {
+			statusErr := r.updateStatus(clusterAgent)
+			if statusErr == nil {
+				reqLogger.Info("Status updated. Exiting reconciliation loop.")
+			} else {
+				reqLogger.Info("Status not updated. Exiting reconciliation loop.")
+			}
+			return reconcile.Result{}, nil
+		}
 	}
 
 	reqLogger.Info("Exiting reconciliation loop.")
 	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileClusterAgent) updateStatus(clusterAgent *appdynamicsv1alpha1.ClusterAgent) error {
+func (r *ReconcileClusteragent) updateStatus(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
 	clusterAgent.Status.LastUpdateTime = metav1.Now()
-	err := r.client.Status().Update(context.TODO(), clusterAgent)
+	err := r.client.Update(context.TODO(), clusterAgent)
+	if err != nil {
+		log.Error(err, "Failed to update cluster agent status", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
+	} else {
+		log.Info("ClusterAgent status updated successfully", "clusterAgent.Namespace", clusterAgent.Namespace, "Date", clusterAgent.Status.LastUpdateTime)
+	}
 	return err
 }
 
-func (r *ReconcileClusterAgent) hasBreakingChanges(clusterAgent *appdynamicsv1alpha1.ClusterAgent, bag *appdynamicsv1alpha1.AppDBag, secret *corev1.Secret) (bool, bool) {
+func (r *ReconcileClusteragent) hasBreakingChanges(clusterAgent *appdynamicsv1alpha1.Clusteragent, bag *appdynamicsv1alpha1.AppDBag, secret *corev1.Secret) (bool, bool) {
 	breaking := false
-	benign := false
+	benign := true
+
+	fmt.Println("Checking for breaking changes...")
+	fmt.Printf("SecretVersion: %s		%s\n", bag.SecretVersion, secret.ResourceVersion)
+	fmt.Printf("ControllerUrl: %s		%s\n", bag.ControllerUrl, clusterAgent.Spec.ControllerUrl)
+	fmt.Printf("AccountName: %s		%s\n", bag.Account, clusterAgent.Spec.Account)
+	fmt.Printf("GlobalAccountName: %s		%s\n", bag.GlobalAccount, clusterAgent.Spec.GlobalAccount)
+	fmt.Printf("AppName: %s		%s\n", bag.AppName, clusterAgent.Spec.AppName)
+	fmt.Printf("EventServiceUrl: %s		%s\n", bag.EventServiceUrl, clusterAgent.Spec.EventServiceUrl)
+	fmt.Printf("SystemSSLCert: %s		%s\n", bag.SystemSSLCert, clusterAgent.Spec.SystemSSLCert)
+	fmt.Printf("AgentSSLCert: %s		%s\n", bag.AgentSSLCert, clusterAgent.Spec.AgentSSLCert)
 
 	if bag.SecretVersion != secret.ResourceVersion || clusterAgent.Spec.ControllerUrl != bag.ControllerUrl ||
-		clusterAgent.Spec.AccountName != bag.Account ||
-		clusterAgent.Spec.GlobalAccountName != bag.GlobalAccount ||
-		clusterAgent.Spec.AgentName != bag.AppName || clusterAgent.Spec.EventServiceUrl != bag.EventServiceUrl ||
-		clusterAgent.Spec.SystemSSLCert != bag.SystemSSLCert || clusterAgent.Spec.AgentSSLCert != bag.AgentSSLCert {
+		(clusterAgent.Spec.Account != "" && clusterAgent.Spec.Account != bag.Account) ||
+		(clusterAgent.Spec.GlobalAccount != "" && clusterAgent.Spec.GlobalAccount != bag.GlobalAccount) ||
+		(clusterAgent.Spec.AppName != "" && clusterAgent.Spec.AppName != bag.AppName) ||
+		(clusterAgent.Spec.EventServiceUrl != "" && clusterAgent.Spec.EventServiceUrl != bag.EventServiceUrl) ||
+		(clusterAgent.Spec.SystemSSLCert != "" && clusterAgent.Spec.SystemSSLCert != bag.SystemSSLCert) ||
+		(clusterAgent.Spec.AgentSSLCert != "" && clusterAgent.Spec.AgentSSLCert != bag.AgentSSLCert) {
 		breaking = true
 	}
-	if !slicesEqual(clusterAgent.Spec.DashboardTiers, bag.DeploysToDashboard) {
-		benign = true
-	}
+
 	return breaking, benign
 }
 
-func (r *ReconcileClusterAgent) ensureSecret(clusterAgent *appdynamicsv1alpha1.ClusterAgent) (*corev1.Secret, error) {
+func (r *ReconcileClusteragent) ensureSecret(clusterAgent *appdynamicsv1alpha1.Clusteragent) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 
 	key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_SECRET_NAME}
@@ -225,8 +243,8 @@ func (r *ReconcileClusterAgent) ensureSecret(clusterAgent *appdynamicsv1alpha1.C
 	return secret, nil
 }
 
-func (r *ReconcileClusterAgent) ensureAgentService(clusterAgent *appdynamicsv1alpha1.ClusterAgent) (*corev1.Service, error) {
-	selector := labelsForClusterAgent(clusterAgent)
+func (r *ReconcileClusteragent) ensureAgentService(clusterAgent *appdynamicsv1alpha1.Clusteragent) (*corev1.Service, error) {
+	selector := labelsForClusteragent(clusterAgent)
 	svc := &corev1.Service{}
 	key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: clusterAgent.Name}
 	err := r.client.Get(context.TODO(), key, svc)
@@ -264,7 +282,7 @@ func (r *ReconcileClusterAgent) ensureAgentService(clusterAgent *appdynamicsv1al
 	return svc, nil
 }
 
-func (r *ReconcileClusterAgent) ensureConfigMap(clusterAgent *appdynamicsv1alpha1.ClusterAgent, secret *corev1.Secret, create bool) (*corev1.ConfigMap, *appdynamicsv1alpha1.AppDBag, error) {
+func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, create bool) (*corev1.ConfigMap, *appdynamicsv1alpha1.AppDBag, error) {
 	cm := &corev1.ConfigMap{}
 	var bag appdynamicsv1alpha1.AppDBag
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "cluster-agent-config", Namespace: clusterAgent.Namespace}, cm)
@@ -294,15 +312,13 @@ func (r *ReconcileClusterAgent) ensureConfigMap(clusterAgent *appdynamicsv1alpha
 
 }
 
-func (r *ReconcileClusterAgent) updateMap(cm *corev1.ConfigMap, clusterAgent *appdynamicsv1alpha1.ClusterAgent, secret *corev1.Secret, create bool) error {
+func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, create bool) error {
 	bag := appdynamicsv1alpha1.GetDefaultProperties()
-	bag.SecretVersion = secret.ResourceVersion
-	bag.AgentNamespace = clusterAgent.Namespace
-	bag.Account = clusterAgent.Spec.AccountName
-	bag.GlobalAccount = clusterAgent.Spec.GlobalAccountName
-	bag.ControllerUrl = clusterAgent.Spec.ControllerUrl
-	bag.DeploysToDashboard = make([]string, len(clusterAgent.Spec.DashboardTiers))
-	copy(bag.DeploysToDashboard, clusterAgent.Spec.DashboardTiers)
+
+	reconcileBag(bag, clusterAgent, secret)
+
+	//	bag.DeploysToDashboard = make([]string, len(clusterAgent.Spec.DashboardTiers))
+	//	copy(bag.DeploysToDashboard, clusterAgent.Spec.DashboardTiers)
 
 	data, errJson := json.Marshal(bag)
 	if errJson != nil {
@@ -325,9 +341,9 @@ func (r *ReconcileClusterAgent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 	return nil
 }
 
-func (r *ReconcileClusterAgent) newAgentDeployment(clusterAgent *appdynamicsv1alpha1.ClusterAgent) *appsv1.Deployment {
+func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1alpha1.Clusteragent) *appsv1.Deployment {
 	fmt.Printf("Building deployment spec for image %s\n", clusterAgent.Spec.Image)
-	ls := labelsForClusterAgent(clusterAgent)
+	ls := labelsForClusteragent(clusterAgent)
 	var replicas int32 = 1
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
@@ -420,9 +436,9 @@ func (r *ReconcileClusterAgent) newAgentDeployment(clusterAgent *appdynamicsv1al
 	return dep
 }
 
-func (r *ReconcileClusterAgent) restartAgent(clusterAgent *appdynamicsv1alpha1.ClusterAgent) error {
+func (r *ReconcileClusteragent) restartAgent(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
 	podList := &corev1.PodList{}
-	labelSelector := labels.SelectorFromSet(labelsForClusterAgent(clusterAgent))
+	labelSelector := labels.SelectorFromSet(labelsForClusteragent(clusterAgent))
 	listOps := &client.ListOptions{
 		Namespace:     clusterAgent.Namespace,
 		LabelSelector: labelSelector,
@@ -440,6 +456,6 @@ func (r *ReconcileClusterAgent) restartAgent(clusterAgent *appdynamicsv1alpha1.C
 	return nil
 }
 
-func labelsForClusterAgent(clusterAgent *appdynamicsv1alpha1.ClusterAgent) map[string]string {
+func labelsForClusteragent(clusterAgent *appdynamicsv1alpha1.Clusteragent) map[string]string {
 	return map[string]string{"name": "clusterAgent", "clusterAgent_cr": clusterAgent.Name}
 }

@@ -129,12 +129,6 @@ func IsBreakingProperty(fieldName string) bool {
 
 func GetDefaultProperties() *AppDBag {
 	bag := AppDBag{
-		RestAPICred:                 "k8sresty@customer1:k8sresty",
-		ControllerUrl:               "http://455controllernossh-k8sbiqtest-eq2w7bwd.srv.ravcloud.com:8090",
-		Account:                     "",
-		GlobalAccount:               "",
-		EventServiceUrl:             "http://455controllernossh-k8sbiqtest-eq2w7bwd.srv.ravcloud.com:9080",
-		EventKey:                    "5be04dca-5c04-491e-b055-bc580ba9d7aa",
 		AppName:                     "K8s-Cluster-Agent",
 		TierName:                    "ClusterAgent",
 		NodeName:                    "Node1",
@@ -156,7 +150,7 @@ func GetDefaultProperties() *AppDBag {
 		DeploySchemaName:            "kube_deploy_snapshots",
 		RSSchemaName:                "kube_rs_snapshots",
 		DaemonSchemaName:            "kube_daemon_snapshots",
-		DashboardTemplatePath:       "/usr/local/go/src/github.com/sjeltuhin/clusterAgent/templates/k8s_dashboard_template.json",
+		DashboardTemplatePath:       "/opt/appdynamics/templates/cluster-template.json",
 		DashboardSuffix:             "SUMMARY",
 		DashboardDelayMin:           2,
 		DeploysToDashboard:          []string{},
@@ -177,14 +171,12 @@ func GetDefaultProperties() *AppDBag {
 		AppLogMountPath:             "/opt/appdlogs",
 		JDKMountName:                "jdk-repo",
 		JDKMountPath:                "$JAVA_HOME/lib",
-		NodeNamePrefix:              "",
 		AnalyticsAgentUrl:           "http://analytics-proxy:9090",
 		AnalyticsAgentContainerName: "appd-analytics-agent",
 		AppDInitContainerName:       "appd-agent-attach",
-		AnalyticsAgentImage:         "sashaz/analytics-agent@sha256:ff776bdf3beed9f4bdf638d16b5a688d9e1c0fc124ce1282bef1851c122397e4",
-		AppDJavaAttachImage:         "sashaz/java-agent-attach@sha256:b93f2018b091f4abfd2533e6c194c9e6ecf00fcae861c732f1b771dad1b26a80",
-		AppDDotNetAttachImage:       "sashaz/dotnet-agent-attach@sha256:3f5d921eadfa227ffe072caa41e01c3c1fc882c5617ad45d808ffedaa20593a6",
-		AppDNodeJSAttachImage:       "latest",
+		AnalyticsAgentImage:         "docker.io/appdynamics/analytics-agent:latest",
+		AppDJavaAttachImage:         "docker.io/appdynamics/java-agent-attach:latest",
+		AppDDotNetAttachImage:       "docker.io/appdynamics/dotnet-agent-attach:latest",
 		NsToMonitor:                 []string{},
 		NsToMonitorExclude:          []string{},
 		NodesToMonitor:              []string{},
@@ -200,7 +192,7 @@ func GetDefaultProperties() *AppDBag {
 		ProxyUser:                   "",
 		ProxyPass:                   "",
 		LogLines:                    0, //0 - no logging}
-		PodEventNumber:              3,
+		PodEventNumber:              1,
 		LogLevel:                    "info",
 		OverconsumptionThreshold:    80,
 	}

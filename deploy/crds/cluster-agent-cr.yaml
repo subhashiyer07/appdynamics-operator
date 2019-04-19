@@ -1,0 +1,8 @@
+apiVersion: appdynamics.com/v1alpha1
+kind: Clusteragent
+metadata:
+  name: local-k8s
+spec:
+  controllerUrl: "http://455controllernossh-k8sbiqtest-eq2w7bwd.srv.ravcloud.com:8090"
+  image: "docker.io/appdynamics/cluster-agent:latest"
+  

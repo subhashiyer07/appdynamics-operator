@@ -1,7 +1,21 @@
 apiVersion: appdynamics.com/v1alpha1
 kind: Clusteragent
 metadata:
-  name: example-clusteragent
+  name: local-k8s
 spec:
-  # Add fields here
-  size: 3
+  controllerUrl: ""
+  appDJavaAttachImage: "appdynamics/java-agent:latest"
+  appDDotNetAttachImage: "appdynamics/dotnet-core-agent:latest"
+  nsToInstrument:
+    - dev
+	- ad-devops
+  instrumentRule:
+	- matchString: "client-api"
+	  namespaces:
+	    - prod
+	  appDAppLabel: "appName"
+	  appDTierLabel: "tierName"
+	  version: "appdynamics/java-agent:4.5.6"
+	  tech: "java"
+	  method: "mountEnv"
+      biq: "sidecar"
