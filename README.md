@@ -77,7 +77,4 @@ spec:
       biq: "sidecar"
 ```
 	
-### Required settings
-
-### Optional settings
 
