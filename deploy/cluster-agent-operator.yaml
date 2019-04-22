@@ -109,7 +109,6 @@ roleRef:
   kind: ClusterRole
   name: appdynamics-operator
   apiGroup: rbac.authorization.k8s.io
-
 ---
 apiVersion: apps/v1
 kind: Deployment

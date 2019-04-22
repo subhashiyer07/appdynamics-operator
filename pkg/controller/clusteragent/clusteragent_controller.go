@@ -173,7 +173,7 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 		}
 	} else {
 		//update the configMap
-		reqLogger.Info("No breaking changed. Reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
+		reqLogger.Info("No breaking changes. Reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
 		errMap := r.updateMap(cm, clusterAgent, secret, false)
 		if errMap != nil {
 			reqLogger.Error(errMap, "Issues when reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
@@ -209,23 +209,43 @@ func (r *ReconcileClusteragent) hasBreakingChanges(clusterAgent *appdynamicsv1al
 	benign := true
 
 	fmt.Println("Checking for breaking changes...")
-	fmt.Printf("SecretVersion: %s		%s\n", bag.SecretVersion, secret.ResourceVersion)
-	fmt.Printf("ControllerUrl: %s		%s\n", bag.ControllerUrl, clusterAgent.Spec.ControllerUrl)
-	fmt.Printf("AccountName: %s		%s\n", bag.Account, clusterAgent.Spec.Account)
-	fmt.Printf("GlobalAccountName: %s		%s\n", bag.GlobalAccount, clusterAgent.Spec.GlobalAccount)
-	fmt.Printf("AppName: %s		%s\n", bag.AppName, clusterAgent.Spec.AppName)
-	fmt.Printf("EventServiceUrl: %s		%s\n", bag.EventServiceUrl, clusterAgent.Spec.EventServiceUrl)
-	fmt.Printf("SystemSSLCert: %s		%s\n", bag.SystemSSLCert, clusterAgent.Spec.SystemSSLCert)
-	fmt.Printf("AgentSSLCert: %s		%s\n", bag.AgentSSLCert, clusterAgent.Spec.AgentSSLCert)
 
-	if bag.SecretVersion != secret.ResourceVersion || clusterAgent.Spec.ControllerUrl != bag.ControllerUrl ||
-		(clusterAgent.Spec.Account != "" && clusterAgent.Spec.Account != bag.Account) ||
-		(clusterAgent.Spec.GlobalAccount != "" && clusterAgent.Spec.GlobalAccount != bag.GlobalAccount) ||
-		(clusterAgent.Spec.AppName != "" && clusterAgent.Spec.AppName != bag.AppName) ||
-		(clusterAgent.Spec.EventServiceUrl != "" && clusterAgent.Spec.EventServiceUrl != bag.EventServiceUrl) ||
-		(clusterAgent.Spec.SystemSSLCert != "" && clusterAgent.Spec.SystemSSLCert != bag.SystemSSLCert) ||
-		(clusterAgent.Spec.AgentSSLCert != "" && clusterAgent.Spec.AgentSSLCert != bag.AgentSSLCert) {
-		breaking = true
+	if bag.SecretVersion != secret.ResourceVersion {
+		fmt.Printf("SecretVersion has changed: %s		%s\n", bag.SecretVersion, secret.ResourceVersion)
+		return true, benign
+	}
+
+	if bag.SecretVersion != secret.ResourceVersion || clusterAgent.Spec.ControllerUrl != bag.ControllerUrl {
+		fmt.Printf("ControllerUrl has changed: %s		%s\n", bag.ControllerUrl, clusterAgent.Spec.ControllerUrl)
+		return true, benign
+	}
+
+	if clusterAgent.Spec.Account != "" && clusterAgent.Spec.Account != bag.Account {
+		fmt.Printf("AccountName has changed: %s		%s\n", bag.Account, clusterAgent.Spec.Account)
+		return true, benign
+	}
+
+	if clusterAgent.Spec.GlobalAccount != "" && clusterAgent.Spec.GlobalAccount != bag.GlobalAccount {
+		fmt.Printf("GlobalAccountName has changed: %s		%s\n", bag.GlobalAccount, clusterAgent.Spec.GlobalAccount)
+		return true, benign
+	}
+	if clusterAgent.Spec.AppName != "" && clusterAgent.Spec.AppName != bag.AppName {
+		fmt.Printf("AppName has changed: %s		%s\n", bag.AppName, clusterAgent.Spec.AppName)
+		return true, benign
+	}
+
+	if clusterAgent.Spec.EventServiceUrl != "" && clusterAgent.Spec.EventServiceUrl != bag.EventServiceUrl {
+		fmt.Printf("EventServiceUrl has changed: %s		%s\n", bag.EventServiceUrl, clusterAgent.Spec.EventServiceUrl)
+		return true, benign
+	}
+	if clusterAgent.Spec.SystemSSLCert != "" && clusterAgent.Spec.SystemSSLCert != bag.SystemSSLCert {
+		fmt.Printf("SystemSSLCert has changed: %s		%s\n", bag.SystemSSLCert, clusterAgent.Spec.SystemSSLCert)
+		return true, benign
+	}
+
+	if clusterAgent.Spec.AgentSSLCert != "" && clusterAgent.Spec.AgentSSLCert != bag.AgentSSLCert {
+		fmt.Printf("AgentSSLCert has changed: %s		%s\n", bag.AgentSSLCert, clusterAgent.Spec.AgentSSLCert)
+		return true, benign
 	}
 
 	return breaking, benign
@@ -342,6 +362,9 @@ func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 }
 
 func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1alpha1.Clusteragent) *appsv1.Deployment {
+	if clusterAgent.Spec.Image == "" {
+		clusterAgent.Spec.Image = "appdynamics/cluster-agent-operator:latest"
+	}
 	fmt.Printf("Building deployment spec for image %s\n", clusterAgent.Spec.Image)
 	ls := labelsForClusteragent(clusterAgent)
 	var replicas int32 = 1
