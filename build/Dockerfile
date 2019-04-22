@@ -6,7 +6,7 @@ LABEL name="AppDynamics ClusterAgent Operator" \
       release="1" \
       url="https://www.appdynamics.com" \
       summary="AppDynamics monitoring solution for applications deployed to Kubernetes clusters" \
-      description="The ClusterAgent monitors state of Kuberenetes resources and derives metrics to provide visibility into the following common application impacting issues."
+      description="The ClusterAgent monitors state of Kuberenetes resources and derives metrics to provide visibility into common application impacting issues."
 
 
 RUN apk upgrade --update --no-cache
@@ -14,3 +14,4 @@ RUN apk upgrade --update --no-cache
 USER nobody
 
 ADD build/_output/bin/appdynamics-operator /usr/local/bin/appdynamics-operator
+ADD LICENSE /usr/local/bin/licenses/
