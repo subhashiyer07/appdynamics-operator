@@ -14,4 +14,4 @@ RUN apk upgrade --update --no-cache
 USER nobody
 
 ADD build/_output/bin/appdynamics-operator /usr/local/bin/appdynamics-operator
-ADD LICENSE /usr/local/bin/licenses/
+ADD LICENSE /licenses/
