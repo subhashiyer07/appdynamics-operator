@@ -18,15 +18,15 @@ const (
 )
 
 type AgentRequest struct {
-	Namespaces    []string              `json: "namespaces"`
-	AppDAppLabel  string                `json: "appDAppLabel"`
-	AppDTierLabel string                `json: "appDTierLabel"`
-	Tech          TechnologyName        `json: "tech"`
-	ContainerName string                `json: "containerName"`
-	Version       string                `json: "version"`
-	MatchString   []string              `json: "MatchString"` //string matched against deployment names and labels, supports regex
-	Method        InstrumentationMethod `json: "instrumentationMethod"`
-	BiQ           string                `json: "biQ"` //"sidecar" or reference to the remote analytics agent
+	Namespaces    []string              `json:"namespaces"`
+	AppDAppLabel  string                `json:"appDAppLabel"`
+	AppDTierLabel string                `json:"appDTierLabel"`
+	Tech          TechnologyName        `json:"tech"`
+	ContainerName string                `json:"containerName"`
+	Version       string                `json:"version"`
+	MatchString   []string              `json:"matchString"` //string matched against deployment names and labels, supports regex
+	Method        InstrumentationMethod `json:"instrumentationMethod"`
+	BiQ           string                `json:"biQ"` //"sidecar" or reference to the remote analytics agent
 }
 
 type AppDBag struct {
@@ -186,7 +186,7 @@ func GetDefaultProperties() *AppDBag {
 		NSInstrumentRule:            []AgentRequest{},
 		InitRequestMem:              "50",
 		InitRequestCpu:              "0.1",
-		BiqRequestMem:               "200",
+		BiqRequestMem:               "600",
 		BiqRequestCpu:               "0.1",
 		ProxyUrl:                    "",
 		ProxyUser:                   "",

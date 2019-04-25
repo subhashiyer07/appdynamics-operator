@@ -3,6 +3,6 @@ kind: Clusteragent
 metadata:
   name: k8s-cluster-agent
 spec:
-  controllerUrl: ""
-  image: "docker.io/appdynamics/cluster-agent:0.11"
+  controllerUrl: "http://455controllernossh-k8sbiqtest-eq2w7bwd.srv.ravcloud.com:8090"
+  image: "docker.io/appdynamics/cluster-agent:0.1.2"
   

@@ -162,7 +162,7 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 		return reconcile.Result{}, econfig
 	}
 
-	breaking, _ := r.hasBreakingChanges(clusterAgent, bag, secret)
+	breaking, updateDeployment := r.hasBreakingChanges(clusterAgent, bag, existingDeployment, secret)
 
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the cluster agent pod...")
@@ -170,6 +170,13 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 		if errRestart != nil {
 			reqLogger.Error(errRestart, "Failed to restart cluster agent", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
 			return reconcile.Result{}, errRestart
+		}
+	} else if updateDeployment {
+		fmt.Println("Breaking changes detected. Updating the the cluster agent deployment...")
+		err = r.client.Update(context.TODO(), existingDeployment)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update ClusterAgent Deployment", "Deployment.Namespace", existingDeployment.Namespace, "Deployment.Name", existingDeployment.Name)
+			return reconcile.Result{}, err
 		}
 	} else {
 		//update the configMap
@@ -204,51 +211,57 @@ func (r *ReconcileClusteragent) updateStatus(clusterAgent *appdynamicsv1alpha1.C
 	return err
 }
 
-func (r *ReconcileClusteragent) hasBreakingChanges(clusterAgent *appdynamicsv1alpha1.Clusteragent, bag *appdynamicsv1alpha1.AppDBag, secret *corev1.Secret) (bool, bool) {
-	breaking := false
-	benign := true
+func (r *ReconcileClusteragent) hasBreakingChanges(clusterAgent *appdynamicsv1alpha1.Clusteragent, bag *appdynamicsv1alpha1.AppDBag, existingDeployment *appsv1.Deployment, secret *corev1.Secret) (bool, bool) {
+	killPod := false
+	updateDeployment := false
 
 	fmt.Println("Checking for breaking changes...")
 
-	if bag.SecretVersion != secret.ResourceVersion {
-		fmt.Printf("SecretVersion has changed: %s		%s\n", bag.SecretVersion, secret.ResourceVersion)
-		return true, benign
+	if clusterAgent.Spec.Image != "" && existingDeployment.Spec.Template.Spec.Containers[0].Image != clusterAgent.Spec.Image {
+		fmt.Printf("Image changed from has changed: %s	to	%s. Updating....\n", existingDeployment.Spec.Template.Spec.Containers[0].Image, clusterAgent.Spec.Image)
+		existingDeployment.Spec.Template.Spec.Containers[0].Image = clusterAgent.Spec.Image
+		return false, true
 	}
 
-	if bag.SecretVersion != secret.ResourceVersion || clusterAgent.Spec.ControllerUrl != bag.ControllerUrl {
+	if bag.SecretVersion != secret.ResourceVersion {
+		fmt.Printf("SecretVersion has changed: %s		%s\n", bag.SecretVersion, secret.ResourceVersion)
+		return true, updateDeployment
+	}
+
+	if clusterAgent.Spec.ControllerUrl != bag.ControllerUrl {
 		fmt.Printf("ControllerUrl has changed: %s		%s\n", bag.ControllerUrl, clusterAgent.Spec.ControllerUrl)
-		return true, benign
+		return true, updateDeployment
 	}
 
 	if clusterAgent.Spec.Account != "" && clusterAgent.Spec.Account != bag.Account {
 		fmt.Printf("AccountName has changed: %s		%s\n", bag.Account, clusterAgent.Spec.Account)
-		return true, benign
+		return true, updateDeployment
 	}
 
 	if clusterAgent.Spec.GlobalAccount != "" && clusterAgent.Spec.GlobalAccount != bag.GlobalAccount {
 		fmt.Printf("GlobalAccountName has changed: %s		%s\n", bag.GlobalAccount, clusterAgent.Spec.GlobalAccount)
-		return true, benign
+		return true, updateDeployment
 	}
 	if clusterAgent.Spec.AppName != "" && clusterAgent.Spec.AppName != bag.AppName {
 		fmt.Printf("AppName has changed: %s		%s\n", bag.AppName, clusterAgent.Spec.AppName)
-		return true, benign
+		return true, updateDeployment
 	}
 
 	if clusterAgent.Spec.EventServiceUrl != "" && clusterAgent.Spec.EventServiceUrl != bag.EventServiceUrl {
 		fmt.Printf("EventServiceUrl has changed: %s		%s\n", bag.EventServiceUrl, clusterAgent.Spec.EventServiceUrl)
-		return true, benign
+		return true, updateDeployment
 	}
 	if clusterAgent.Spec.SystemSSLCert != "" && clusterAgent.Spec.SystemSSLCert != bag.SystemSSLCert {
 		fmt.Printf("SystemSSLCert has changed: %s		%s\n", bag.SystemSSLCert, clusterAgent.Spec.SystemSSLCert)
-		return true, benign
+		return true, updateDeployment
 	}
 
 	if clusterAgent.Spec.AgentSSLCert != "" && clusterAgent.Spec.AgentSSLCert != bag.AgentSSLCert {
 		fmt.Printf("AgentSSLCert has changed: %s		%s\n", bag.AgentSSLCert, clusterAgent.Spec.AgentSSLCert)
-		return true, benign
+		return true, updateDeployment
 	}
 
-	return breaking, benign
+	return killPod, updateDeployment
 }
 
 func (r *ReconcileClusteragent) ensureSecret(clusterAgent *appdynamicsv1alpha1.Clusteragent) (*corev1.Secret, error) {
@@ -337,8 +350,7 @@ func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 
 	reconcileBag(bag, clusterAgent, secret)
 
-	//	bag.DeploysToDashboard = make([]string, len(clusterAgent.Spec.DashboardTiers))
-	//	copy(bag.DeploysToDashboard, clusterAgent.Spec.DashboardTiers)
+	fmt.Printf("InstrumentMatchString: %s\n", bag.InstrumentMatchString)
 
 	data, errJson := json.Marshal(bag)
 	if errJson != nil {
