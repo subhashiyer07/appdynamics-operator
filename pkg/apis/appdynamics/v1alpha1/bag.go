@@ -25,7 +25,7 @@ type AgentRequest struct {
 	ContainerName string                `json:"containerName"`
 	Version       string                `json:"version"`
 	MatchString   []string              `json:"matchString"` //string matched against deployment names and labels, supports regex
-	Method        InstrumentationMethod `json:"instrumentationMethod"`
+	Method        InstrumentationMethod `json:"method"`
 	BiQ           string                `json:"biQ"` //"sidecar" or reference to the remote analytics agent
 }
 

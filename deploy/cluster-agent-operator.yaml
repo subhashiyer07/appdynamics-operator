@@ -127,7 +127,7 @@ spec:
       serviceAccountName: appdynamics-operator
       containers:
         - name: appdynamics-operator
-          image: docker.io/appdynamics/cluster-agent-operator:0.1.2
+          image: docker.io/appdynamics/cluster-agent-operator:0.1.3
           ports:
           - containerPort: 60000
             name: metrics
@@ -141,14 +141,6 @@ spec:
             requests:
               cpu: 100m
               memory: 64Mi
-          readinessProbe:
-            exec:
-              command:
-                - stat
-                - /tmp/operator-sdk-ready
-            initialDelaySeconds: 4
-            periodSeconds: 10
-            failureThreshold: 1
           env:
             - name: WATCH_NAMESPACE
               value: ""

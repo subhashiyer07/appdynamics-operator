@@ -111,7 +111,7 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: clusterAgent.Name, Namespace: clusterAgent.Namespace}, existingDeployment)
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Cluster agent deployment does not exist. Creating...")
-		reqLogger.Info("Checking the secret")
+		reqLogger.Info("Checking the secret...")
 		secret, esecret := r.ensureSecret(clusterAgent)
 		if esecret != nil {
 			reqLogger.Error(esecret, "Failed to create new Cluster Agent due to secret", "Deployment.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
@@ -164,6 +164,13 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 
 	breaking, updateDeployment := r.hasBreakingChanges(clusterAgent, bag, existingDeployment, secret)
 
+	//update the configMap
+	reqLogger.Info("Reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
+	errMap := r.updateMap(cm, clusterAgent, secret, false)
+	if errMap != nil {
+		reqLogger.Error(errMap, "Issues when reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
+		return reconcile.Result{}, errMap
+	}
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the cluster agent pod...")
 		errRestart := r.restartAgent(clusterAgent)
@@ -179,21 +186,17 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, err
 		}
 	} else {
-		//update the configMap
-		reqLogger.Info("No breaking changes. Reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
-		errMap := r.updateMap(cm, clusterAgent, secret, false)
-		if errMap != nil {
-			reqLogger.Error(errMap, "Issues when reconciling the config map...", "clusterAgent.Namespace", clusterAgent.Namespace)
-			return reconcile.Result{}, errMap
+
+		reqLogger.Info("No breaking changes.", "clusterAgent.Namespace", clusterAgent.Namespace)
+
+		statusErr := r.updateStatus(clusterAgent)
+		if statusErr == nil {
+			reqLogger.Info("Status updated. Exiting reconciliation loop.")
 		} else {
-			statusErr := r.updateStatus(clusterAgent)
-			if statusErr == nil {
-				reqLogger.Info("Status updated. Exiting reconciliation loop.")
-			} else {
-				reqLogger.Info("Status not updated. Exiting reconciliation loop.")
-			}
-			return reconcile.Result{}, nil
+			reqLogger.Info("Status not updated. Exiting reconciliation loop.")
 		}
+		return reconcile.Result{}, nil
+
 	}
 
 	reqLogger.Info("Exiting reconciliation loop.")
@@ -269,7 +272,35 @@ func (r *ReconcileClusteragent) ensureSecret(clusterAgent *appdynamicsv1alpha1.C
 
 	key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_SECRET_NAME}
 	err := r.client.Get(context.TODO(), key, secret)
-	if err != nil {
+	if err != nil && errors.IsNotFound(err) {
+		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'api-user' key of the secret has a valid value", AGENT_SECRET_NAME)
+
+		secret = &corev1.Secret{
+			Type: corev1.SecretTypeOpaque,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      AGENT_SECRET_NAME,
+				Namespace: clusterAgent.Namespace,
+			},
+		}
+
+		secret.StringData = make(map[string]string)
+		secret.StringData["api-user"] = ""
+		secret.StringData["controller-key"] = ""
+		secret.StringData["event-key"] = ""
+
+		errCreate := r.client.Create(context.TODO(), secret)
+		if errCreate != nil {
+			fmt.Printf("Unable to create secret. %v\n", errCreate)
+			return nil, fmt.Errorf("Unable to get secret for cluster-agent. %v", errCreate)
+		} else {
+			fmt.Printf("Secret created. %s\n", AGENT_SECRET_NAME)
+			errLoad := r.client.Get(context.TODO(), key, secret)
+			if errLoad != nil {
+				fmt.Printf("Unable to reload secret. %v\n", errLoad)
+				return nil, fmt.Errorf("Unable to get secret for cluster-agent. %v", err)
+			}
+		}
+	} else if err != nil {
 		return nil, fmt.Errorf("Unable to get secret for cluster-agent. %v", err)
 	}
 
@@ -323,7 +354,7 @@ func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha
 		return nil, nil, fmt.Errorf("Failed to load configMap cluster-agent-config. %v", err)
 	}
 	if err != nil && errors.IsNotFound(err) {
-		fmt.Printf("Congigmap not found. Creating...\n")
+		fmt.Printf("Config map not found. Creating...\n")
 		//configMap does not exist. Create
 		cm.Name = "cluster-agent-config"
 		cm.Namespace = clusterAgent.Namespace
@@ -339,6 +370,7 @@ func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha
 		if jsonErr != nil {
 			return nil, nil, fmt.Errorf("Enable to retrieve the configMap. Cannot deserialize. %v", jsonErr)
 		}
+		bag.SecretVersion = secret.ResourceVersion
 	}
 
 	return cm, &bag, nil
@@ -349,8 +381,6 @@ func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 	bag := appdynamicsv1alpha1.GetDefaultProperties()
 
 	reconcileBag(bag, clusterAgent, secret)
-
-	fmt.Printf("InstrumentMatchString: %s\n", bag.InstrumentMatchString)
 
 	data, errJson := json.Marshal(bag)
 	if errJson != nil {
