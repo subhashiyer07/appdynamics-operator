@@ -131,7 +131,7 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 			return reconcile.Result{}, esvc
 		}
 		// Define a new deployment for the cluster agent
-		dep := r.newAgentDeployment(clusterAgent, updatedBag)
+		dep := r.newAgentDeployment(clusterAgent, secret, updatedBag)
 		reqLogger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = r.client.Create(context.TODO(), dep)
 		if err != nil {
@@ -450,7 +450,7 @@ func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 	return bag, nil
 }
 
-func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1alpha1.Clusteragent, bag *appdynamicsv1alpha1.AppDBag) *appsv1.Deployment {
+func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, bag *appdynamicsv1alpha1.AppDBag) *appsv1.Deployment {
 	if clusterAgent.Spec.Image == "" {
 		clusterAgent.Spec.Image = "appdynamics/cluster-agent-operator:latest"
 	}
@@ -479,24 +479,6 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 					ServiceAccountName: "appdynamics-operator",
 					Containers: []corev1.Container{{
 						Env: []corev1.EnvVar{
-							{
-								Name: "APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY",
-								ValueFrom: &corev1.EnvVarSource{
-									SecretKeyRef: &corev1.SecretKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_SECRET_NAME},
-										Key:                  "controller-key",
-									},
-								},
-							},
-							{
-								Name: "APPDYNAMICS_EVENT_ACCESS_KEY",
-								ValueFrom: &corev1.EnvVarSource{
-									SecretKeyRef: &corev1.SecretKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_SECRET_NAME},
-										Key:                  "event-key",
-									},
-								},
-							},
 							{
 								Name: "APPDYNAMICS_REST_API_CREDENTIALS",
 								ValueFrom: &corev1.EnvVarSource{
@@ -543,6 +525,35 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 			},
 		},
 	}
+
+	//add more env vars, if the secret has they keys
+	if _, ok := secret.Data["controller-key"]; ok {
+		controllerVar := corev1.EnvVar{
+			Name: "APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_SECRET_NAME},
+					Key:                  "controller-key",
+				},
+			},
+		}
+
+		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, controllerVar)
+	}
+
+	if _, ok := secret.Data["event-key"]; ok {
+		eventVar := corev1.EnvVar{
+			Name: "APPDYNAMICS_EVENT_ACCESS_KEY",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_SECRET_NAME},
+					Key:                  "event-key",
+				},
+			},
+		}
+		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, eventVar)
+	}
+
 	// Set Cluster Agent instance as the owner and controller
 	controllerutil.SetControllerReference(clusterAgent, dep, r.scheme)
 	return dep
