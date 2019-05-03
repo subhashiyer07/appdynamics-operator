@@ -29,6 +29,28 @@ type AgentRequest struct {
 	BiQ           string                `json:"biQ"` //"sidecar" or reference to the remote analytics agent
 }
 
+type AgentStatus struct {
+	Version                    string
+	MetricsSyncInterval        int
+	SnapshotSyncInterval       int
+	LogLevel                   string
+	LogLines                   int
+	NsToMonitor                []string
+	NsToMonitorExclude         []string
+	NodesToMonitor             []string
+	NodesToMonitorExclude      []string
+	NsToInstrument             []string
+	NsToInstrumentExclude      []string
+	NSInstrumentRule           []AgentRequest
+	InstrumentationMethod      InstrumentationMethod
+	DefaultInstrumentationTech TechnologyName
+	InstrumentMatchString      []string
+	BiqService                 string
+	AnalyticsAgentImage        string
+	AppDJavaAttachImage        string
+	AppDDotNetAttachImage      string
+}
+
 type AppDBag struct {
 	AgentNamespace              string
 	AppName                     string
@@ -90,7 +112,7 @@ type AppDBag struct {
 	InitContainerDir            string
 	MetricsSyncInterval         int // Frequency of metrics pushes to the controller, sec
 	SnapshotSyncInterval        int // Frequency of snapshot pushes to events api, sec
-	AgentServerPort             int
+	AgentServerPort             int32
 	NsToMonitor                 []string
 	NsToMonitorExclude          []string
 	DeploysToDashboard          []string

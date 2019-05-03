@@ -17,7 +17,7 @@ type ClusteragentSpec struct {
 	Env             []corev1.EnvVar             `json:"env,omitempty"`
 	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
 	AppName         string                      `json:"appName,omitempty"`
-	AgentServerPort int                         `json:"agentServerPort,omitempty"`
+	AgentServerPort int32                       `json:"agentServerPort,omitempty"`
 	SystemSSLCert   string                      `json:"systemSSLCert,omitempty"`
 	AgentSSLCert    string                      `json:"agentSSLCert,omitempty"`
 	ProxyUrl        string                      `json:"proxyUrl,omitempty"`
@@ -94,6 +94,7 @@ type ClusteragentSpec struct {
 type ClusteragentStatus struct {
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	LastUpdateTime metav1.Time `json:"lastUpdateTime"`
+	State          AgentStatus `json:"state"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
