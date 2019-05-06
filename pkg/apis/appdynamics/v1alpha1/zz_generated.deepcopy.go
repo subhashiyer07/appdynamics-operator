@@ -68,8 +68,8 @@ func (in *AgentStatus) DeepCopyInto(out *AgentStatus) {
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
-	if in.NSInstrumentRule != nil {
-		in, out := &in.NSInstrumentRule, &out.NSInstrumentRule
+	if in.InstrumentRule != nil {
+		in, out := &in.InstrumentRule, &out.InstrumentRule
 		*out = make([]AgentRequest, len(*in))
 		for i := range *in {
 			(*in)[i].DeepCopyInto(&(*out)[i])

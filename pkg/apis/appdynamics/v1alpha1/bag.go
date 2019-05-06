@@ -18,37 +18,37 @@ const (
 )
 
 type AgentRequest struct {
-	Namespaces    []string              `json:"namespaces"`
-	AppDAppLabel  string                `json:"appDAppLabel"`
-	AppDTierLabel string                `json:"appDTierLabel"`
-	Tech          TechnologyName        `json:"tech"`
-	ContainerName string                `json:"containerName"`
-	Version       string                `json:"version"`
-	MatchString   []string              `json:"matchString"` //string matched against deployment names and labels, supports regex
-	Method        InstrumentationMethod `json:"method"`
-	BiQ           string                `json:"biQ"` //"sidecar" or reference to the remote analytics agent
+	Namespaces    []string              `json:"namespaces,omitempty"`
+	AppDAppLabel  string                `json:"appDAppLabel,omitempty"`
+	AppDTierLabel string                `json:"appDTierLabel,omitempty"`
+	Tech          TechnologyName        `json:"tech,omitempty"`
+	ContainerName string                `json:"containerName,omitempty"`
+	Version       string                `json:"version,omitempty"`
+	MatchString   []string              `json:"matchString,omitempty"` //string matched against deployment names and labels, supports regex
+	Method        InstrumentationMethod `json:"method,omitempty"`
+	BiQ           string                `json:"biQ,omitempty"` //"sidecar" or reference to the remote analytics agent
 }
 
 type AgentStatus struct {
-	Version                    string
-	MetricsSyncInterval        int
-	SnapshotSyncInterval       int
-	LogLevel                   string
-	LogLines                   int
-	NsToMonitor                []string
-	NsToMonitorExclude         []string
-	NodesToMonitor             []string
-	NodesToMonitorExclude      []string
-	NsToInstrument             []string
-	NsToInstrumentExclude      []string
-	NSInstrumentRule           []AgentRequest
-	InstrumentationMethod      InstrumentationMethod
-	DefaultInstrumentationTech TechnologyName
-	InstrumentMatchString      []string
-	BiqService                 string
-	AnalyticsAgentImage        string
-	AppDJavaAttachImage        string
-	AppDDotNetAttachImage      string
+	Version                    string                `json:"version,omitempty"`
+	MetricsSyncInterval        int                   `json:"metricsSyncInterval"`
+	SnapshotSyncInterval       int                   `json:"snapshotSyncInterval"`
+	LogLevel                   string                `json:"logLevel"`
+	LogLines                   int                   `json:"logLines"`
+	NsToMonitor                []string              `json:"nsToMonitor,omitempty"`
+	NsToMonitorExclude         []string              `json:"nsToMonitorExclude,omitempty"`
+	NodesToMonitor             []string              `json:"nodesToMonitor,omitempty"`
+	NodesToMonitorExclude      []string              `json:"nodesToMonitorExclude,omitempty"`
+	NsToInstrument             []string              `json:"nsToInstrument,omitempty"`
+	NsToInstrumentExclude      []string              `json:"nsToInstrumentExclude,omitempty"`
+	InstrumentRule             []AgentRequest        `json:"instrumentRule,omitempty"`
+	InstrumentationMethod      InstrumentationMethod `json:"instrumentationMethod,omitempty"`
+	DefaultInstrumentationTech TechnologyName        `json:"defaultInstrumentationTech,omitempty"`
+	InstrumentMatchString      []string              `json:"instrumentMatchString,omitempty"`
+	BiqService                 string                `json:"biqService,omitempty"`
+	AnalyticsAgentImage        string                `json:"analyticsAgentImage,omitempty"`
+	AppDJavaAttachImage        string                `json:"appDJavaAttachImage,omitempty"`
+	AppDDotNetAttachImage      string                `json:"appDDotNetAttachImage,omitempty"`
 }
 
 type AppDBag struct {

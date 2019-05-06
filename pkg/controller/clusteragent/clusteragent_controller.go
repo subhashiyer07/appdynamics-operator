@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
+	"time"
 
 	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -201,7 +202,7 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 	}
 
 	reqLogger.Info("Exiting reconciliation loop.")
-	return reconcile.Result{}, nil
+	return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
 }
 
 func (r *ReconcileClusteragent) updateStatus(clusterAgent *appdynamicsv1alpha1.Clusteragent, updatedBag *appdynamicsv1alpha1.AppDBag) error {
