@@ -63,33 +63,37 @@ kind: ServiceAccount
 metadata:
   name: appdynamics-infraviz
 ---
-apiVersion: extensions/v1beta1
-kind: PodSecurityPolicy
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
 metadata:
   name: appdynamics-infraviz
-  annotations:
-    seccomp.security.alpha.kubernetes.io/allowedProfileNames: '*'
-spec:
-  privileged: true
-  allowPrivilegeEscalation: true
-  allowedCapabilities:
-  - '*'
-  volumes:
-  - '*'
-  hostNetwork: true
-  hostIPC: true
-  hostPID: true
-  hostPorts:
-  - min: 0
-    max: 65535
-  runAsUser:
-    rule: 'RunAsAny'
-  seLinux:
-    rule: 'RunAsAny'
-  supplementalGroups:
-    rule: 'RunAsAny'
-  fsGroup:
-    rule: 'RunAsAny'
+allowHostDirVolumePlugin: true
+allowHostIPC: true
+allowHostNetwork: true
+allowHostPID: true
+allowHostPorts: true
+allowPrivilegedContainer: true
+allowedCapabilities:
+- '*'
+allowedFlexVolumes: null
+defaultAddCapabilities: null
+fsGroup:
+  type: RunAsAny
+priority: null
+readOnlyRootFilesystem: false
+requiredDropCapabilities: null
+runAsUser:
+  type: RunAsAny
+seLinuxContext:
+  type: RunAsAny
+seccompProfiles:
+- '*'
+supplementalGroups:
+  type: RunAsAny
+users:
+- system:serviceaccount:appdynamics:appdynamics-infraviz
+volumes:
+- '*'
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -171,10 +175,10 @@ rules:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: appdynamics-operator
+  name: appdynamics-infraviz
 subjects:
 - kind: ServiceAccount
-  name: appdynamics-operator
+  name: appdynamics-infraviz
   namespace: appdynamics  
 roleRef:
   kind: ClusterRole
@@ -184,44 +188,15 @@ roleRef:
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
 metadata:
-  name: appdynamics-infraviz
+  name: appdynamics-operator
 subjects:
 - kind: ServiceAccount
-  name: appdynamics-infraviz
+  name: appdynamics-operator
   namespace: appdynamics  
 roleRef:
   kind: ClusterRole
   name: appdynamics-operator
   apiGroup: rbac.authorization.k8s.io
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: appdynamics-infraviz
-  namespace: appdynamics
-rules:
-- apiGroups:
-  - extensions
-  resources:
-  - podsecuritypolicies
-  resourceNames:
-  - appdynamics-infraviz
-  verbs:
-  - use
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: appdynamics-infraviz
-  namespace: appdynamics
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: appdynamics-infraviz
-subjects:
-- kind: ServiceAccount
-  name: appdynamics-infraviz
-  namespace: appdynamics
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -240,7 +215,7 @@ spec:
       serviceAccountName: appdynamics-operator
       containers:
         - name: appdynamics-operator
-          image: docker.io/appdynamics/cluster-agent-operator:0.1.5
+          image: docker.io/appdynamics/cluster-agent-operator:0.1.6
           ports:
           - containerPort: 60000
             name: metrics
