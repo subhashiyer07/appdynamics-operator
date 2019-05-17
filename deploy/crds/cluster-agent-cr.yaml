@@ -4,5 +4,5 @@ metadata:
   name: k8s-cluster-agent
 spec:
   controllerUrl: "https://<controller>"
-  image: "docker.io/appdynamics/cluster-agent:0.1.6"
+  image: "docker.io/appdynamics/cluster-agent:latest"
   
