@@ -2,7 +2,9 @@ apiVersion: appdynamics.com/v1alpha1
 kind: Clusteragent
 metadata:
   name: k8s-cluster-agent
+  namespace: appdynamics
 spec:
   controllerUrl: "https://<controller>"
   image: "docker.io/appdynamics/cluster-agent:latest"
+ 
   

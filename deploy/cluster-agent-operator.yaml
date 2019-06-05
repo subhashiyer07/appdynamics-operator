@@ -57,11 +57,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: appdynamics-operator
+  namespace: appdynamics
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: appdynamics-infraviz
+  namespace: appdynamics
 ---
 apiVersion: extensions/v1beta1
 kind: PodSecurityPolicy
@@ -227,6 +229,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: appdynamics-operator
+  namespace: appdynamics
 spec:
   replicas: 1
   selector:

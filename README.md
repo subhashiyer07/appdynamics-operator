@@ -77,14 +77,16 @@ apiVersion: appdynamics.com/v1alpha1
 kind: Clusteragent
 metadata:
   name: local-k8s
+  namespace: appdynamics
 spec:
-  controllerUrl: ""
+  controllerUrl: "https://appd-controller.com"
+  appName: MyClusterAgent
   appDJavaAttachImage: "appdynamics/java-agent:latest"
   appDDotNetAttachImage: "appdynamics/dotnet-core-agent:latest"
   nsToInstrument:
     - dev
 	- ad-devops
-  instrumentRule:
+    instrumentRule:
 	- matchString: 
 	  - "client-api"
 	  namespaces:
