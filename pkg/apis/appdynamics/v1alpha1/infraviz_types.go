@@ -18,12 +18,15 @@ type InfraVizSpec struct {
 	GlobalAccount         string                      `json:"globalAccount,omitempty"`
 	EventServiceUrl       string                      `json:"eventServiceUrl,omitempty"`
 	EnableContainerHostId string                      `json:"enableContainerHostId,omitempty"`
+	EnableDockerViz       string                      `json:"enableDockerViz,omitempty"`
+	EnableServerViz       string                      `json:"enableServerViz,omitempty"`
 	UniqieHostId          string                      `json:"uniqieHostId,omitempty"`
 	MetricsLimit          string                      `json:"metricsLimit,omitempty"`
 	ProxyUrl              string                      `json:"proxyUrl,omitempty"`
 	ProxyUser             string                      `json:"proxyUser,omitempty"`
 	LogLevel              string                      `json:"logLevel,omitempty"`
 	StdoutLogging         bool                        `json:"stdoutLogging,omitempty"`
+	PropertyBag           string                      `json:"propertyBag,omitempty"`
 	NodeSelector          map[string]string           `json:"nodeSelector,omitempty"`
 	Tolerations           []corev1.Toleration         `json:"tolerations,omitempty"`
 	Args                  []string                    `json:"args,omitempty"`

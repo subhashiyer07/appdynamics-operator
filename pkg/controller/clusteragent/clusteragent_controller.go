@@ -97,8 +97,6 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 	reqLogger.Info("Retrieved cluster agent.", "Image", clusterAgent.Spec.Image)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			// Request object not found, could have been deleted after reconcile request.
-			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			reqLogger.Info("Cluster Agent resource not found. The object must be deleted")
 			return reconcile.Result{}, nil
@@ -394,6 +392,19 @@ func (r *ReconcileClusteragent) ensureAgentService(clusterAgent *appdynamicsv1al
 	return svc, nil
 }
 
+func (r *ReconcileClusteragent) cleanUp(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "cluster-agent-config", Namespace: clusterAgent.Namespace}, cm)
+	if err == nil && cm != nil {
+		err = r.client.Delete(context.TODO(), cm)
+		if err != nil {
+			log.Info("Unable to delete the old instance of the configMap", err)
+		} else {
+			log.Info("The old instance of the configMap deleted")
+		}
+	}
+}
+
 func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, create bool) (*corev1.ConfigMap, *appdynamicsv1alpha1.AppDBag, error) {
 	cm := &corev1.ConfigMap{}
 	var bag *appdynamicsv1alpha1.AppDBag
@@ -499,7 +510,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 							},
 						},
 						Image:           clusterAgent.Spec.Image,
-						ImagePullPolicy: corev1.PullIfNotPresent,
+						ImagePullPolicy: corev1.PullAlways,
 						Name:            "cluster-agent",
 						Resources:       clusterAgent.Spec.Resources,
 						Ports: []corev1.ContainerPort{{

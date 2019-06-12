@@ -223,7 +223,7 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 	if infraViz.Spec.ProxyUrl != "" {
 		arr := strings.Split(infraViz.Spec.ProxyUrl, ":")
 		if len(arr) != 3 {
-			fmt.Println("ProxyUrl is invalid. Use this format: protocol://url:port")
+			fmt.Println("ProxyUrl is invalid. Use this format: protocol://domain:port")
 		}
 		proxyHost = strings.TrimLeft(arr[1], "//")
 		proxyPort = arr[2]
@@ -277,7 +277,11 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 			cm.Data["APPDYNAMICS_AGENT_PROXY_PORT"] != proxyPort ||
 			cm.Data["APPDYNAMICS_AGENT_PROXY_USER"] != proxyUser ||
 			cm.Data["APPDYNAMICS_AGENT_PROXY_PASS"] != proxyPass ||
-			cm.Data["APPDYNAMICS_AGENT_METRIC_LIMIT"] != infraViz.Spec.MetricsLimit {
+			cm.Data["APPDYNAMICS_AGENT_ENABLE_CONTAINERIDASHOSTID"] != infraViz.Spec.EnableContainerHostId ||
+			cm.Data["APPDYNAMICS_SIM_ENABLED"] != infraViz.Spec.EnableServerViz ||
+			cm.Data["APPDYNAMICS_DOCKER_ENABLED"] != infraViz.Spec.EnableDockerViz ||
+			cm.Data["APPDYNAMICS_AGENT_METRIC_LIMIT"] != infraViz.Spec.MetricsLimit ||
+			cm.Data["APPDYNAMICS_MA_PROPERTIES"] != infraViz.Spec.PropertyBag {
 			breakingChanges = true
 		}
 
@@ -293,6 +297,24 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 	cm.Data["APPDYNAMICS_CONTROLLER_HOST_NAME"] = controllerDns
 	cm.Data["APPDYNAMICS_CONTROLLER_PORT"] = strconv.Itoa(int(port))
 	cm.Data["APPDYNAMICS_CONTROLLER_SSL_ENABLED"] = string(sslEnabled)
+
+	if infraViz.Spec.EnableContainerHostId == "" {
+		infraViz.Spec.EnableContainerHostId = "true"
+	}
+	cm.Data["APPDYNAMICS_AGENT_ENABLE_CONTAINERIDASHOSTID"] = infraViz.Spec.EnableContainerHostId
+
+	if infraViz.Spec.EnableServerViz == "" {
+		infraViz.Spec.EnableServerViz = "true"
+	}
+
+	cm.Data["APPDYNAMICS_SIM_ENABLED"] = infraViz.Spec.EnableServerViz
+
+	if infraViz.Spec.EnableDockerViz == "" {
+		infraViz.Spec.EnableDockerViz = "true"
+	}
+
+	cm.Data["APPDYNAMICS_DOCKER_ENABLED"] = infraViz.Spec.EnableDockerViz
+
 	cm.Data["EVENT_ENDPOINT"] = eventUrl
 	cm.Data["APPDYNAMICS_AGENT_PROXY_HOST"] = proxyHost
 	cm.Data["APPDYNAMICS_AGENT_PROXY_PORT"] = proxyPort
@@ -301,6 +323,7 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 	cm.Data["APPDYNAMICS_AGENT_METRIC_LIMIT"] = infraViz.Spec.MetricsLimit
 	cm.Data["APPDYNAMICS_LOG_LEVEL"] = logLevel
 	cm.Data["APPDYNAMICS_LOG_STDOUT"] = strconv.FormatBool(infraViz.Spec.StdoutLogging)
+	cm.Data["APPDYNAMICS_MA_PROPERTIES"] = infraViz.Spec.PropertyBag
 
 	if create {
 		e := r.client.Create(context.TODO(), cm)
