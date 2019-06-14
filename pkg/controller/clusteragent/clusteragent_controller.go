@@ -440,6 +440,9 @@ func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 	bag := appdynamicsv1alpha1.GetDefaultProperties()
 
 	reconcileBag(bag, clusterAgent, secret)
+	if create {
+		bag.InstrumentationUpdated = false
+	}
 
 	data, errJson := json.Marshal(bag)
 	if errJson != nil {

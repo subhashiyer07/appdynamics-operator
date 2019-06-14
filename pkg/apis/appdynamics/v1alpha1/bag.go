@@ -18,15 +18,17 @@ const (
 )
 
 type AgentRequest struct {
-	Namespaces    []string              `json:"namespaces,omitempty"`
-	AppDAppLabel  string                `json:"appDAppLabel,omitempty"`
-	AppDTierLabel string                `json:"appDTierLabel,omitempty"`
-	Tech          TechnologyName        `json:"tech,omitempty"`
-	ContainerName string                `json:"containerName,omitempty"`
-	Version       string                `json:"version,omitempty"`
-	MatchString   []string              `json:"matchString,omitempty"` //string matched against deployment names and labels, supports regex
-	Method        InstrumentationMethod `json:"method,omitempty"`
-	BiQ           string                `json:"biQ,omitempty"` //"sidecar" or reference to the remote analytics agent
+	Namespaces     []string              `json:"namespaces,omitempty"`
+	AppDAppLabel   string                `json:"appDAppLabel,omitempty"`
+	AppDTierLabel  string                `json:"appDTierLabel,omitempty"`
+	Tech           TechnologyName        `json:"tech,omitempty"`
+	ContainerName  string                `json:"containerName,omitempty"`
+	Version        string                `json:"version,omitempty"`
+	MatchString    []string              `json:"matchString,omitempty"` //string matched against deployment names and labels, supports regex
+	Method         InstrumentationMethod `json:"method,omitempty"`
+	BiQ            string                `json:"biQ,omitempty"` //"sidecar" or reference to the remote analytics agent
+	AppNameLiteral string                `json:"appNameLiteral,omitempty"`
+	AgentEnvVar    string                `json:"agentEnvVar,omitempty"`
 }
 
 type AgentStatus struct {
@@ -89,6 +91,9 @@ type AppDBag struct {
 	DashboardDelayMin           int
 	AgentEnvVar                 string
 	AgentLabel                  string
+	AgentLogOverride            string
+	AgentUserOverride           string
+	AppNameLiteral              string
 	AppDAppLabel                string
 	AppDTierLabel               string
 	AppDAnalyticsLabel          string
@@ -136,6 +141,7 @@ type AppDBag struct {
 	SchemaUpdateCache           []string
 	LogLevel                    string
 	OverconsumptionThreshold    int
+	InstrumentationUpdated      bool
 }
 
 func IsBreakingProperty(fieldName string) bool {
@@ -183,7 +189,10 @@ func GetDefaultProperties() *AppDBag {
 		InstrumentMatchString:       []string{},
 		InitContainerDir:            "/opt/temp",
 		AgentLabel:                  "appd-agent",
+		AgentLogOverride:            "",
+		AgentUserOverride:           "",
 		AgentEnvVar:                 "JAVA_OPTS",
+		AppNameLiteral:              "",
 		AppDAppLabel:                "appd-app",
 		AppDTierLabel:               "appd-tier",
 		AppDAnalyticsLabel:          "appd-biq",
@@ -217,6 +226,7 @@ func GetDefaultProperties() *AppDBag {
 		PodEventNumber:              1,
 		LogLevel:                    "info",
 		OverconsumptionThreshold:    80,
+		InstrumentationUpdated:      false,
 	}
 
 	return &bag

@@ -51,7 +51,10 @@ type ClusteragentSpec struct {
 	InstrumentContainer         string         `json:"instrumentContainer,omitempty"`
 	InitContainerDir            string         `json:"initContainerDir,omitempty"`
 	AgentLabel                  string         `json:"agentLabel,omitempty"`
+	AgentLogOverride            string         `json:"agentLogOverride,omitempty"`
+	AgentUserOverride           string         `json:"agentUserOverride,omitempty"`
 	AgentEnvVar                 string         `json:"agentEnvVar,omitempty"`
+	AppNameLiteral              string         `json:"appNameLiteral,omitempty"`
 	AppDAppLabel                string         `json:"appDAppLabel,omitempty"`
 	AppDTierLabel               string         `json:"appDTierLabel,omitempty"`
 	AppDAnalyticsLabel          string         `json:"appDAnalyticsLabel,omitempty"`

@@ -106,12 +106,12 @@ spec:
   instrumentRule:
   - matchString: 
     - "client-api" # only deployments with matching name or metadata will be instrumented
-    namespaces:
+  namespaces:
     - ns1
-	appDAppLabel: "appName"  # this value will be used as Application name
-	appDTierLabel: "tierName" # this value will be used as Tier name
-	version: "appdynamics/java-agent:4.5.6" # version override
-	biq: "sidecar" # add analytics agent in the sidecar
+  appDAppLabel: "appName"  # this value will be used as Application name
+  appDTierLabel: "tierName" # this value will be used as Tier name
+  version: "appdynamics/java-agent:4.5.6" # version override
+  biq: "sidecar" # add analytics agent in the sidecar
 ```
 
 For other instrumentation examples, refer to this [documentation](https://github.com/Appdynamics/cluster-agent/blob/master/docs/instrumentation.md)

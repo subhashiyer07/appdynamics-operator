@@ -1,6 +1,8 @@
 package clusteragent
 
 import (
+	"reflect"
+
 	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -32,6 +34,7 @@ func slicesEqual(x, y []string) bool {
 }
 
 func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret) {
+	bag.InstrumentationUpdated = false
 	bag.SecretVersion = secret.ResourceVersion
 	bag.AgentNamespace = clusterAgent.Namespace
 	bag.ControllerUrl = clusterAgent.Spec.ControllerUrl
@@ -166,7 +169,8 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		bag.DashboardTemplatePath = clusterAgent.Spec.DashboardTemplatePath
 	}
 
-	if clusterAgent.Spec.InstrumentationMethod != "" {
+	if bag.InstrumentationMethod != appdynamicsv1alpha1.InstrumentationMethod(clusterAgent.Spec.InstrumentationMethod) {
+		bag.InstrumentationUpdated = true
 		bag.InstrumentationMethod = appdynamicsv1alpha1.InstrumentationMethod(clusterAgent.Spec.InstrumentationMethod)
 	}
 
@@ -174,19 +178,22 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		bag.DefaultInstrumentationTech = appdynamicsv1alpha1.TechnologyName(clusterAgent.Spec.DefaultInstrumentationTech)
 	}
 
-	if len(clusterAgent.Spec.InstrumentMatchString) > 0 {
+	if reflect.DeepEqual(bag.InstrumentMatchString, clusterAgent.Spec.InstrumentMatchString) == false {
 		bag.InstrumentMatchString = make([]string, len(clusterAgent.Spec.InstrumentMatchString))
 		copy(bag.InstrumentMatchString, clusterAgent.Spec.InstrumentMatchString)
+		bag.InstrumentationUpdated = true
 	}
 
-	if len(clusterAgent.Spec.NsToInstrument) > 0 {
+	if reflect.DeepEqual(bag.NsToInstrument, clusterAgent.Spec.NsToInstrument) == false {
 		bag.NsToInstrument = make([]string, len(clusterAgent.Spec.NsToInstrument))
 		copy(bag.NsToInstrument, clusterAgent.Spec.NsToInstrument)
+		bag.InstrumentationUpdated = true
 	}
 
-	if len(clusterAgent.Spec.NsToInstrumentExclude) > 0 {
+	if reflect.DeepEqual(bag.NsToInstrumentExclude, clusterAgent.Spec.NsToInstrumentExclude) == false {
 		bag.NsToInstrumentExclude = make([]string, len(clusterAgent.Spec.NsToInstrumentExclude))
 		copy(bag.NsToInstrumentExclude, clusterAgent.Spec.NsToInstrumentExclude)
+		bag.InstrumentationUpdated = true
 	}
 
 	if len(clusterAgent.Spec.NsToMonitor) > 0 {
@@ -209,9 +216,20 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		copy(bag.NodesToMonitorExclude, clusterAgent.Spec.NodesToMonitorExclude)
 	}
 
-	if len(clusterAgent.Spec.InstrumentRule) > 0 {
+	if reflect.DeepEqual(bag.NSInstrumentRule, clusterAgent.Spec.InstrumentRule) == false {
 		bag.NSInstrumentRule = make([]appdynamicsv1alpha1.AgentRequest, len(clusterAgent.Spec.InstrumentRule))
 		copy(bag.NSInstrumentRule, clusterAgent.Spec.InstrumentRule)
+		bag.InstrumentationUpdated = true
+	}
+
+	if bag.AgentLogOverride != clusterAgent.Spec.AgentLogOverride {
+		bag.AgentLogOverride = clusterAgent.Spec.AgentLogOverride
+		bag.InstrumentationUpdated = true
+	}
+
+	if bag.AgentUserOverride != clusterAgent.Spec.AgentUserOverride {
+		bag.AgentUserOverride = clusterAgent.Spec.AgentUserOverride
+		bag.InstrumentationUpdated = true
 	}
 
 	if clusterAgent.Spec.AnalyticsAgentImage != "" {
@@ -226,8 +244,9 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		bag.AppDDotNetAttachImage = clusterAgent.Spec.AppDDotNetAttachImage
 	}
 
-	if clusterAgent.Spec.BiqService != "" {
+	if clusterAgent.Spec.BiqService != bag.BiqService {
 		bag.BiqService = clusterAgent.Spec.BiqService
+		bag.InstrumentationUpdated = true
 	}
 
 	if clusterAgent.Spec.InstrumentContainer != "" {
@@ -244,14 +263,22 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 
 	if clusterAgent.Spec.AgentEnvVar != "" {
 		bag.AgentEnvVar = clusterAgent.Spec.AgentEnvVar
+		bag.InstrumentationUpdated = true
 	}
 
-	if clusterAgent.Spec.AppDAppLabel != "" {
+	if bag.AppNameLiteral != clusterAgent.Spec.AppNameLiteral {
+		bag.AppNameLiteral = clusterAgent.Spec.AppNameLiteral
+		bag.InstrumentationUpdated = true
+	}
+
+	if clusterAgent.Spec.AppDAppLabel != bag.AppDAppLabel {
 		bag.AppDAppLabel = clusterAgent.Spec.AppDAppLabel
+		bag.InstrumentationUpdated = true
 	}
 
-	if clusterAgent.Spec.AppDTierLabel != "" {
+	if clusterAgent.Spec.AppDTierLabel != bag.AppDTierLabel {
 		bag.AppDTierLabel = clusterAgent.Spec.AppDTierLabel
+		bag.InstrumentationUpdated = true
 	}
 
 	if clusterAgent.Spec.AppDAnalyticsLabel != "" {

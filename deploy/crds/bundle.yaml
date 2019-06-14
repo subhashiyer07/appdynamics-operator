@@ -9,11 +9,11 @@ spec:
   appName: "GKEAgent"
   instrumentationMethod: "mountEnv"
   instrumentMatchString:  # full match or regex of the deployment names that you want to instrument.
-  - api
+  - client-api
   nsToInstrument:  # namespace to instrument
-  - ns1
+  - dev
   biqService: "proxy"
-  appDAppLabel: "platform" 
+  appDAppLabel: "platform"
 ---
 apiVersion: appdynamics.com/v1alpha1
 kind: InfraViz
@@ -23,8 +23,8 @@ metadata:
 spec:
   controllerUrl: "http://appdynamics.com"
   image: "docker.io/appdynamics/machine-agent-analytics:latest"
-  account: "<appd-account-name>"
-  globalAccount: "<appd-global-account-name"
- 
+  account: "<account>"
+  globalAccount: "<globalAccount>"
+  stdoutLogging: true
  
   
