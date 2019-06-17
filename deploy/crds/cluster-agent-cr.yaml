@@ -6,12 +6,13 @@ metadata:
 spec:
   controllerUrl: "http://appdynamics.com"
   image: "docker.io/appdynamics/cluster-agent:latest"
+  appName: "GKEAgent"
   logLevel: "info"
   instrumentationMethod: "mountEnv"
   instrumentMatchString:  # full match or regex of the deployment names that you want to instrument.
   - client-api
   nsToInstrument:  # namespace to instrument
   - dev
-  appDAppLabel: "platform"
+  appNameLiteral: "ContainerPlatform"
  
   
