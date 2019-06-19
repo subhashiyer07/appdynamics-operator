@@ -4,15 +4,15 @@ metadata:
   name: k8s-cluster-agent
   namespace: appdynamics
 spec:
-  controllerUrl: "http://appdynamics.com"
+  controllerUrl: "https://appdynamics.com"
   image: "docker.io/appdynamics/cluster-agent:latest"
-  appName: "GKEAgent"
   logLevel: "info"
   instrumentationMethod: "mountEnv"
   instrumentMatchString:  # full match or regex of the deployment names that you want to instrument.
-  - client-api
+  - api
   nsToInstrument:  # namespace to instrument
-  - dev
-  appNameLiteral: "ContainerPlatform"
+  - ns1
+  appNameLiteral: "AppDApplication01"
+  appDTierLabel: "tier"
  
   
