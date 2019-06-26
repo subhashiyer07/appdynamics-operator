@@ -12,6 +12,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -29,9 +30,11 @@ import (
 var log = logf.Log.WithName("controller_infraviz")
 
 const (
-	AGENT_SECRET_NAME     string = "cluster-agent-secret"
-	AGENT_CONFIG_NAME     string = "ma-config"
-	AGENT_LOG_CONFIG_NAME string = "ma-log-config"
+	AGENT_SECRET_NAME        string = "cluster-agent-secret"
+	AGENT_CONFIG_NAME        string = "ma-config"
+	AGENT_LOG_CONFIG_NAME    string = "ma-log-config"
+	AGENT_NETVIZ_CONFIG_NAME string = "netviz-config"
+	BIQPORT                  int32  = 9090
 )
 
 /**
@@ -149,7 +152,7 @@ func (r *ReconcileInfraViz) Reconcile(request reconcile.Request) (reconcile.Resu
 		}
 	}
 
-	if hasDSpecChanged(&existingDs.Spec, &infraViz.Spec) {
+	if hasDSpecChanged(&existingDs.Spec, &desiredDS.Spec, &infraViz.Spec) {
 		err = r.client.Update(context.TODO(), desiredDS)
 		if err != nil {
 			return reconcile.Result{}, err
@@ -242,6 +245,10 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 		logLevel = infraViz.Spec.LogLevel
 	}
 
+	if infraViz.Spec.NetVizPort > 0 {
+		r.ensureNetVizConfig(infraViz)
+	}
+
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "ma-config", Namespace: infraViz.Namespace}, cm)
 
@@ -267,6 +274,7 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 				return breakingChanges, e
 			}
 		}
+
 		if cm.Data["APPDYNAMICS_AGENT_ACCOUNT_NAME"] != infraViz.Spec.Account ||
 			cm.Data["APPDYNAMICS_AGENT_GLOBAL_ACCOUNT_NAME"] != infraViz.Spec.GlobalAccount ||
 			cm.Data["APPDYNAMICS_CONTROLLER_HOST_NAME"] != controllerDns ||
@@ -297,6 +305,8 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 	cm.Data["APPDYNAMICS_CONTROLLER_HOST_NAME"] = controllerDns
 	cm.Data["APPDYNAMICS_CONTROLLER_PORT"] = strconv.Itoa(int(port))
 	cm.Data["APPDYNAMICS_CONTROLLER_SSL_ENABLED"] = string(sslEnabled)
+
+	cm.Data["APPDYNAMICS_NETVIZ_AGENT_PORT"] = strconv.Itoa(int(infraViz.Spec.NetVizPort))
 
 	if infraViz.Spec.EnableContainerHostId == "" {
 		infraViz.Spec.EnableContainerHostId = "true"
@@ -406,11 +416,20 @@ func (r *ReconcileInfraViz) getInfraVizPods(infraViz *appdynamicsv1alpha1.InfraV
 }
 
 func (r *ReconcileInfraViz) newInfraVizDaemonSet(infraViz *appdynamicsv1alpha1.InfraViz) *appsv1.DaemonSet {
+	netviz := false
+	if infraViz.Spec.NetVizPort > 0 {
+		netviz = true
+	}
+
+	if infraViz.Spec.BiqPort == 0 {
+		infraViz.Spec.BiqPort = BIQPORT
+	}
+
 	r.ensureAgentService(infraViz)
 	r.ensureSecret(infraViz)
 
 	selector := labelsForInfraViz(infraViz)
-	podSpec := r.newPodSpecForCR(infraViz)
+	podSpec := r.newPodSpecForCR(infraViz, netviz)
 
 	ds := appsv1.DaemonSet{
 		ObjectMeta: metav1.ObjectMeta{
@@ -430,10 +449,14 @@ func (r *ReconcileInfraViz) newInfraVizDaemonSet(infraViz *appdynamicsv1alpha1.I
 	return &ds
 }
 
-func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraViz) corev1.PodSpec {
+func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraViz, netviz bool) corev1.PodSpec {
 	trueVar := true
 	if infraViz.Spec.Image == "" {
 		infraViz.Spec.Image = "appdynamics/machine-agent-analytics:latest"
+	}
+
+	if infraViz.Spec.NetVizImage == "" {
+		infraViz.Spec.NetVizImage = "appdynamics/machine-agent-netviz:latest"
 	}
 
 	accessKey := corev1.EnvVar{
@@ -458,7 +481,7 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 	cm.ConfigMapRef = &corev1.ConfigMapEnvSource{}
 	cm.ConfigMapRef.Name = AGENT_CONFIG_NAME
 
-	return corev1.PodSpec{
+	podSpec := corev1.PodSpec{
 		Containers: []corev1.Container{{
 			Args: infraViz.Spec.Args,
 			Env:  infraViz.Spec.Env,
@@ -471,16 +494,11 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 
 			Resources: infraViz.Spec.Resources,
 			SecurityContext: &corev1.SecurityContext{
-				Privileged:   &trueVar,
-				Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
+				Privileged: &trueVar,
 			},
 			Ports: []corev1.ContainerPort{{
-				ContainerPort: 9090,
+				ContainerPort: infraViz.Spec.BiqPort,
 				Protocol:      corev1.ProtocolTCP,
-			}, {
-				ContainerPort: 3892,
-				Protocol:      corev1.ProtocolTCP,
-				HostPort:      3892,
 			}},
 			VolumeMounts: []corev1.VolumeMount{{
 				Name:      "hostroot",
@@ -529,9 +547,63 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 				},
 			}},
 	}
+
+	if netviz {
+		resRequest := corev1.ResourceList{}
+		resRequest[corev1.ResourceCPU] = resource.MustParse("0.1")
+		resRequest[corev1.ResourceMemory] = resource.MustParse("150Mi")
+
+		resLimit := corev1.ResourceList{}
+		resLimit[corev1.ResourceCPU] = resource.MustParse("0.2")
+		resLimit[corev1.ResourceMemory] = resource.MustParse("300Mi")
+		reqs := corev1.ResourceRequirements{Requests: resRequest, Limits: resLimit}
+
+		netVizVolume := corev1.Volume{Name: "netviz-volume",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: AGENT_NETVIZ_CONFIG_NAME,
+					},
+				},
+			}}
+		podSpec.Volumes = append(podSpec.Volumes, netVizVolume)
+
+		netVizContainer := corev1.Container{
+			Image:           infraViz.Spec.NetVizImage,
+			ImagePullPolicy: corev1.PullAlways,
+			Name:            "appd-netviz-agent",
+
+			Resources: reqs,
+			SecurityContext: &corev1.SecurityContext{
+				Capabilities: &corev1.Capabilities{Add: []corev1.Capability{"NET_ADMIN", "NET_RAW"}},
+			},
+			Ports: []corev1.ContainerPort{{
+				ContainerPort: infraViz.Spec.NetVizPort,
+				Protocol:      corev1.ProtocolTCP,
+				HostPort:      infraViz.Spec.NetVizPort,
+			}},
+			VolumeMounts: []corev1.VolumeMount{{
+				Name:      "netviz-volume",
+				MountPath: "/netviz-agent/conf/agent_config.lua",
+				SubPath:   "agent_config.lua",
+			}},
+		}
+		podSpec.Containers = append(podSpec.Containers, netVizContainer)
+	}
+
+	return podSpec
 }
 
-func hasDSpecChanged(dsSpec *appsv1.DaemonSetSpec, ivSpec *appdynamicsv1alpha1.InfraVizSpec) bool {
+func hasDSpecChanged(dsSpec *appsv1.DaemonSetSpec, newSpec *appsv1.DaemonSetSpec, ivSpec *appdynamicsv1alpha1.InfraVizSpec) bool {
+	if len(dsSpec.Template.Spec.Containers) != len(newSpec.Template.Spec.Containers) {
+		return true
+	}
+	if len(dsSpec.Template.Spec.Containers) == 2 && len(newSpec.Template.Spec.Containers) == 2 &&
+		len(dsSpec.Template.Spec.Containers[1].Ports) > 0 && len(newSpec.Template.Spec.Containers[1].Ports) > 0 {
+		if dsSpec.Template.Spec.Containers[1].Ports[0].ContainerPort != newSpec.Template.Spec.Containers[1].Ports[0].ContainerPort {
+			return true
+		}
+	}
 	currentSpecClone := ivSpec.DeepCopy()
 	cloneCurrentSpec(dsSpec, currentSpecClone)
 	if !reflect.DeepEqual(ivSpec, currentSpecClone) {
@@ -543,12 +615,12 @@ func hasDSpecChanged(dsSpec *appsv1.DaemonSetSpec, ivSpec *appdynamicsv1alpha1.I
 func cloneCurrentSpec(dsSpec *appsv1.DaemonSetSpec, ivSpec *appdynamicsv1alpha1.InfraVizSpec) {
 
 	ivSpec.Image = ""
-	if len(dsSpec.Template.Spec.Containers) == 1 {
+	if len(dsSpec.Template.Spec.Containers) >= 1 {
 		ivSpec.Image = dsSpec.Template.Spec.Containers[0].Image
 	}
 
 	ivSpec.Env = nil
-	if len(dsSpec.Template.Spec.Containers) == 1 && dsSpec.Template.Spec.Containers[0].Env != nil {
+	if len(dsSpec.Template.Spec.Containers) >= 1 && dsSpec.Template.Spec.Containers[0].Env != nil {
 		in, out := &dsSpec.Template.Spec.Containers[0].Env, &ivSpec.Env
 		*out = make([]corev1.EnvVar, len(*in))
 		for i := range *in {
@@ -575,14 +647,14 @@ func cloneCurrentSpec(dsSpec *appsv1.DaemonSetSpec, ivSpec *appdynamicsv1alpha1.
 	}
 
 	ivSpec.Args = nil
-	if len(dsSpec.Template.Spec.Containers) == 1 && dsSpec.Template.Spec.Containers[0].Args != nil {
+	if len(dsSpec.Template.Spec.Containers) >= 1 && dsSpec.Template.Spec.Containers[0].Args != nil {
 		in, out := &dsSpec.Template.Spec.Containers[0].Args, &ivSpec.Args
 		*out = make([]string, len(*in))
 		copy(*out, *in)
 	}
 
 	ivSpec.Resources = corev1.ResourceRequirements{}
-	if len(dsSpec.Template.Spec.Containers) == 1 {
+	if len(dsSpec.Template.Spec.Containers) >= 1 {
 		dsSpec.Template.Spec.Containers[0].Resources.DeepCopyInto(&ivSpec.Resources)
 	}
 }
@@ -737,12 +809,12 @@ func (r *ReconcileInfraViz) ensureAgentService(infraViz *appdynamicsv1alpha1.Inf
 					{
 						Name:     "biq-port",
 						Protocol: corev1.ProtocolTCP,
-						Port:     9090,
+						Port:     infraViz.Spec.BiqPort,
 					},
 					{
 						Name:     "netviz-port",
 						Protocol: corev1.ProtocolTCP,
-						Port:     3892,
+						Port:     infraViz.Spec.NetVizPort,
 					},
 				},
 			},
@@ -757,4 +829,221 @@ func (r *ReconcileInfraViz) ensureAgentService(infraViz *appdynamicsv1alpha1.Inf
 
 func labelsForInfraViz(infraViz *appdynamicsv1alpha1.InfraViz) map[string]string {
 	return map[string]string{"name": "infraViz", "infraViz_cr": infraViz.Name}
+}
+
+func (r *ReconcileInfraViz) ensureNetVizConfig(infraViz *appdynamicsv1alpha1.InfraViz) error {
+	netvizProps := fmt.Sprintf(`--
+-- Copyright (c) 2019 AppDynamics Inc.
+-- All rights reserved.
+--
+-- $Id$
+package.path = './?.lua;' .. package.path
+require "config_helper"
+
+ROOT_DIR="/netviz-agent"
+INSTALL_DIR=ROOT_DIR
+-- Define a unique hostname for identification on controller
+UNIQUE_HOST_ID = ""
+
+--
+-- NPM global configuration
+-- Configurable params
+-- {
+--	enable_monitor = 0/1,	-- def:0, enable/disable monitoring
+--	disable_filter = 0/1,	-- def:0, disable/enable language agent filtering
+--	mode = KPI/Diagnostic/Advanced,	-- def:KPI
+--	enable_netlib = 0/1,	-- def:0, using netlib to map appid with tuples.
+--	lua_scripts_path	-- Path to lua scripts.
+--	enable_fqdn = 0/1	-- def:0, enable/disable fqdn resolution of ip
+-- }
+--
+npm_config = {
+	log_destination = "file",
+	log_file = "appd-netagent.log",
+	debug_log_file = "agent-debug.log",
+	disable_filter = 1,
+	mode = "KPI",
+	enable_netlib = 0,
+	lua_scripts_path = ROOT_DIR .. "/scripts/netagent/lua",
+	enable_fqdn = 1,
+}
+
+--
+-- Webserver configuration
+-- Configurable params
+-- {
+--	port = ,		-- Port on which to open the webserver
+--	request_timeout = , -- Request timeout in ms
+--	threads = ,		-- Number of threads on the webserver
+-- }
+--
+webserver_config = {
+	port = %d,
+	request_timeout = 10000,
+	threads = 2,
+}
+
+--
+-- Packet capture configurations (multiple captures can be configured)
+-- Confiurable params, there can be multiple of these.
+-- {
+-- 	cap_module = "pcap",		-- def:"pcap", capture module
+-- 	cap_type = "device"/"file",	-- def:"device", type of capture
+-- 	ifname = "",		-- def:"any", interface name/pcap filename
+-- 	enable_promisc = 0/1,	-- def:0, promiscuous mode pkt capture
+-- 	thinktime = ,		-- def: 100, time in msec, to sleep if no pkts
+-- 	snaplen = ,		-- def:1518. pkt capture len
+-- 	buflen = ,		-- def:2. pcap buffer size in MB
+-- 	ppi = ,			-- def:32. pcap ppi
+-- },
+--
+capture = {
+	-- first capture interface
+	{
+		cap_module = "pcap",
+		cap_type = "device",
+		ifname = "any",
+		thinktime = 25,
+		buflen = 48,
+--		filter = "",
+	},
+--[[	{
+		cap_module = "pcap",
+		cap_type = "device",
+		ifname = "en0",
+	},
+--]]
+}
+
+--
+-- IP configuration
+-- ip_config = {
+--	expire_timeout = ,	-- Mins after which we expire ip metadata
+--	retry_count = ,		-- No of tries to resolve fqdn for ip
+-- }
+ip_config = {
+	expire_interval = 20,
+	retry_count = 5,
+}
+
+--
+-- DPI configuration
+-- Configurable params
+-- {
+--	max_flows = ,	-- Max number of flows per fg to DPI at any given time.
+--	max_data = ,	-- Max mega bytes to DPI per flow.
+--	max_depth = ,	-- Max bytes to DPI in a packet
+--	max_callchains = , -- Max callchains to store for a flowgroup
+--	max_cc_perflow = , -- Max number of call chains to look for in each flow
+-- }
+--
+dpi_config = {
+	max_flows = 10,
+	max_data = 4,
+	max_depth = 4096,
+	max_callchains_in_fg = 32,
+	max_callchains_in_flow = 2,
+}
+
+-- Configurations for application service ports
+-- {
+--	ports = ,	-- Comma separated list of application service
+--			   ports greater than 32000. Example
+--			   ports = "40000, 41000, 42000"
+-- }
+--[[
+application_service_ports = {
+	ports = "",
+}
+--]]
+
+--
+-- Export data from network agent configuration/tunnables
+-- Configurable params, there can be multiple of these.
+-- {
+-- 	exportype = "file"/"remote",	-- type of export mechanism
+-- 	statsfile = "",			-- filename for stats export
+-- 	metricsfile = "", 		-- filename for metrics export
+-- 	serialization = "pb",		-- pb/capnp, serialization module
+-- 	transport = "zmq", 		-- def:"zmq", transport module
+-- 	zmqdest = "", 			-- dest peer for zmq
+--  },
+--
+export_config = {
+	-- file export
+	{
+		exporttype = "file",
+		statsfile = "agent-stats.log",
+		metricsfile = "agent-metrics.log",
+		eventsfile =  "agent-events.log",
+		snapshotsfile = "agent-snapshots.log",
+		metadatafile = "agent-metadata.log",
+	},
+}
+
+-- Plugin interface configuration.
+-- List of interfaces to be monitored by supported plugins.
+-- Configurable params, there can be multiple of these.
+-- {
+-- 	interface = "eth0",	-- def: "eth0", interface name
+-- }
+plugin_if_config = {
+--[[
+	{interface = "eth0"},
+--]]
+}
+
+-- Plugin process configuration.
+-- List of processes to be monitored by supported plugins.
+-- Configurable params, there can be multiple of these.
+-- {
+--	process = "",		-- def: "appd-netagent", process name
+-- }
+plugin_proc_config = {
+	{process = "appd-netagent"},
+}
+
+-- metadata to pass to pass the agent metadata specific params
+system_metadata = {
+	unique_host_id = UNIQUE_HOST_ID,
+	install_dir = INSTALL_DIR,
+	install_time = get_last_update_time(),
+}
+`, infraViz.Spec.NetVizPort)
+
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_NETVIZ_CONFIG_NAME, Namespace: infraViz.Namespace}, cm)
+
+	create := err != nil && errors.IsNotFound(err)
+	//	if err == nil {
+	//		e := r.client.Delete(context.TODO(), cm)
+	//		if e != nil {
+	//			return fmt.Errorf("Unable to delete the old Netviz configMap. %v", e)
+	//		}
+	//	}
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("Unable to load Netviz configMap. %v", err)
+	}
+
+	fmt.Printf("Recreating Netviz Config Map\n")
+
+	cm.Name = AGENT_NETVIZ_CONFIG_NAME
+	cm.Namespace = infraViz.Namespace
+	cm.Data = make(map[string]string)
+	cm.Data["agent_config.lua"] = string(netvizProps)
+
+	if create {
+		e := r.client.Create(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to create Netviz configMap. %v", e)
+		}
+	} else {
+		e := r.client.Update(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to re-create Netviz configMap. %v", e)
+		}
+	}
+
+	fmt.Println("Netviz Configmap re-created")
+	return nil
 }

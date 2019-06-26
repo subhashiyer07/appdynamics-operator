@@ -99,6 +99,7 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 		if errors.IsNotFound(err) {
 			// Return and don't requeue
 			reqLogger.Info("Cluster Agent resource not found. The object must be deleted")
+			r.cleanUp(nil)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
@@ -110,6 +111,8 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 	existingDeployment := &appsv1.Deployment{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: clusterAgent.Name, Namespace: clusterAgent.Namespace}, existingDeployment)
 	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Removing the old instance of the configMap...")
+		r.cleanUp(clusterAgent)
 		reqLogger.Info("Cluster agent deployment does not exist. Creating...")
 		reqLogger.Info("Checking the secret...")
 		secret, esecret := r.ensureSecret(clusterAgent)
@@ -393,8 +396,17 @@ func (r *ReconcileClusteragent) ensureAgentService(clusterAgent *appdynamicsv1al
 }
 
 func (r *ReconcileClusteragent) cleanUp(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
+	namespace := "appdynamics"
+	if clusterAgent != nil {
+		namespace = clusterAgent.Namespace
+	}
 	cm := &corev1.ConfigMap{}
-	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "cluster-agent-config", Namespace: clusterAgent.Namespace}, cm)
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: "cluster-agent-config", Namespace: namespace}, cm)
+	if err != nil && errors.IsNotFound(err) {
+		log.Info("The old instance of the configMap does not exist")
+		return
+	}
+
 	if err == nil && cm != nil {
 		err = r.client.Delete(context.TODO(), cm)
 		if err != nil {
@@ -402,6 +414,8 @@ func (r *ReconcileClusteragent) cleanUp(clusterAgent *appdynamicsv1alpha1.Cluste
 		} else {
 			log.Info("The old instance of the configMap deleted")
 		}
+	} else {
+		log.Error(err, "Unable to retrieve the old instance of the configmap")
 	}
 }
 
@@ -417,7 +431,7 @@ func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha
 		//configMap does not exist. Create
 		cm.Name = "cluster-agent-config"
 		cm.Namespace = clusterAgent.Namespace
-		bag, err = r.updateMap(cm, clusterAgent, secret, create)
+		bag, err = r.updateMap(cm, clusterAgent, secret, true)
 		if err != nil {
 			return nil, nil, err
 		}

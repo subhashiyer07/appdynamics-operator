@@ -131,6 +131,7 @@ type AppDBag struct {
 	BiqService                  string
 	InstrumentContainer         string //all, first, name
 	InstrumentMatchString       []string
+	NetVizPort                  int
 	InitRequestMem              string
 	InitRequestCpu              string
 	BiqRequestMem               string
@@ -215,6 +216,7 @@ func GetDefaultProperties() *AppDBag {
 		NsToInstrument:              []string{},
 		NsToInstrumentExclude:       []string{},
 		NSInstrumentRule:            []AgentRequest{},
+		NetVizPort:                  0,
 		InitRequestMem:              "50",
 		InitRequestCpu:              "0.1",
 		BiqRequestMem:               "600",

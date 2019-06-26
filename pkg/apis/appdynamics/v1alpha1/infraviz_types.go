@@ -25,6 +25,9 @@ type InfraVizSpec struct {
 	ProxyUrl              string                      `json:"proxyUrl,omitempty"`
 	ProxyUser             string                      `json:"proxyUser,omitempty"`
 	LogLevel              string                      `json:"logLevel,omitempty"`
+	NetVizPort            int32                       `json:"netVizPort,omitempty"`
+	NetVizImage           string                      `json:"netVizImage,omitempty"`
+	BiqPort               int32                       `json:"biqPort,omitempty"`
 	StdoutLogging         bool                        `json:"stdoutLogging,omitempty"`
 	PropertyBag           string                      `json:"propertyBag,omitempty"`
 	NodeSelector          map[string]string           `json:"nodeSelector,omitempty"`

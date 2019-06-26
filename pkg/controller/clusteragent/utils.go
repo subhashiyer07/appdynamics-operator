@@ -169,6 +169,10 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		bag.DashboardTemplatePath = clusterAgent.Spec.DashboardTemplatePath
 	}
 
+	if bag.NetVizPort != clusterAgent.Spec.NetVizPort {
+		bag.NetVizPort = clusterAgent.Spec.NetVizPort
+	}
+
 	if bag.InstrumentationMethod != appdynamicsv1alpha1.InstrumentationMethod(clusterAgent.Spec.InstrumentationMethod) {
 		bag.InstrumentationUpdated = true
 		bag.InstrumentationMethod = appdynamicsv1alpha1.InstrumentationMethod(clusterAgent.Spec.InstrumentationMethod)
@@ -224,12 +228,10 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 
 	if bag.AgentLogOverride != clusterAgent.Spec.AgentLogOverride {
 		bag.AgentLogOverride = clusterAgent.Spec.AgentLogOverride
-		bag.InstrumentationUpdated = true
 	}
 
 	if bag.AgentUserOverride != clusterAgent.Spec.AgentUserOverride {
 		bag.AgentUserOverride = clusterAgent.Spec.AgentUserOverride
-		bag.InstrumentationUpdated = true
 	}
 
 	if clusterAgent.Spec.AnalyticsAgentImage != "" {

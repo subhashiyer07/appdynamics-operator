@@ -1,0 +1,12 @@
+apiVersion: appdynamics.com/v1alpha1
+kind: InfraViz
+metadata:
+  name: appd-infraviz
+  namespace: appdynamics
+spec:
+  controllerUrl: "http://appdynamics.com"
+  image: "docker.io/appdynamics/machine-agent-analytics:latest"
+  account: "account"
+  globalAccount: "globalAccount"
+  stdoutLogging: true
+  netVizPort: 3892

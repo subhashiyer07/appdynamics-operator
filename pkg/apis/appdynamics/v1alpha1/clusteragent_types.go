@@ -68,6 +68,7 @@ type ClusteragentSpec struct {
 	AnalyticsAgentUrl           string         `json:"analyticsAgentUrl,omitempty"`
 	AnalyticsAgentContainerName string         `json:"analyticsAgentContainerName,omitempty"`
 	AppDInitContainerName       string         `json:"appDInitContainerName,omitempty"`
+	NetVizPort                  int            `json:"netVizPort,omitempty"`
 	InitRequestMem              string         `json:"initRequestMem,omitempty"`
 	InitRequestCpu              string         `json:"initRequestCpu,omitempty"`
 	BiqRequestMem               string         `json:"biqRequestMem,omitempty"`
