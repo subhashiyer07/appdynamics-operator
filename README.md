@@ -156,6 +156,7 @@ spec:
 | `metricsLimit` | Number of metrics that the Machine Agent is allowed to post to the controller | Optional |
 | `logLevel`	| Logging level (`info` or `debug`) | `info` |
 | `stdoutLogging` | Determines if the logs are saved to a file or redirected to the console | "false" |
+| `netVizPort` | When > 0, the network visibility agent will be deployed in a sidecar along with the machine agent. By default the network visibility agent works with port `3892` | Not set by default |
 | `proxyUrl` | Url of the proxy server (protocol://domain:port") | Optional |
 | `proxyUser` | Proxy user credentials (user@password) | Optional |
 | `propertyBag` | A string with any other machine agent parameters | Optional
