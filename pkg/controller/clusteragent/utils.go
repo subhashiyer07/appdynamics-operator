@@ -173,6 +173,10 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		bag.NetVizPort = clusterAgent.Spec.NetVizPort
 	}
 
+	if bag.UniqueHostID != clusterAgent.Spec.UniqueHostID {
+		bag.UniqueHostID = clusterAgent.Spec.UniqueHostID
+	}
+
 	if bag.InstrumentationMethod != appdynamicsv1alpha1.InstrumentationMethod(clusterAgent.Spec.InstrumentationMethod) {
 		bag.InstrumentationUpdated = true
 		bag.InstrumentationMethod = appdynamicsv1alpha1.InstrumentationMethod(clusterAgent.Spec.InstrumentationMethod)

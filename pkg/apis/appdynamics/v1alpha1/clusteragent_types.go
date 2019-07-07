@@ -73,6 +73,7 @@ type ClusteragentSpec struct {
 	InitRequestCpu              string         `json:"initRequestCpu,omitempty"`
 	BiqRequestMem               string         `json:"biqRequestMem,omitempty"`
 	BiqRequestCpu               string         `json:"biqRequestCpu,omitempty"`
+	UniqueHostID                string         `json:"uniqueHostID,omitempty"`
 
 	//snapshot schemas
 	PodSchemaName       string `json:"podSchemaName,omitempty"`

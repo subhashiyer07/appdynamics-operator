@@ -29,6 +29,7 @@ type AgentRequest struct {
 	BiQ            string                `json:"biQ,omitempty"` //"sidecar" or reference to the remote analytics agent
 	AppNameLiteral string                `json:"appNameLiteral,omitempty"`
 	AgentEnvVar    string                `json:"agentEnvVar,omitempty"`
+	UniqueHostID   string                `json:"uniqueHostID,omitempty"`
 }
 
 type AgentStatus struct {
@@ -136,6 +137,7 @@ type AppDBag struct {
 	InitRequestCpu              string
 	BiqRequestMem               string
 	BiqRequestCpu               string
+	UniqueHostID                string
 	LogLines                    int //0 - no logging
 	PodEventNumber              int
 	SecretVersion               string
@@ -221,6 +223,7 @@ func GetDefaultProperties() *AppDBag {
 		InitRequestCpu:              "0.1",
 		BiqRequestMem:               "600",
 		BiqRequestCpu:               "0.1",
+		UniqueHostID:                "",
 		ProxyUrl:                    "",
 		ProxyUser:                   "",
 		ProxyPass:                   "",
