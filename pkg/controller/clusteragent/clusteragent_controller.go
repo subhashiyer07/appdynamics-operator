@@ -481,7 +481,7 @@ func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *ap
 
 func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, bag *appdynamicsv1alpha1.AppDBag) *appsv1.Deployment {
 	if clusterAgent.Spec.Image == "" {
-		clusterAgent.Spec.Image = "appdynamics/cluster-agent-operator:latest"
+		clusterAgent.Spec.Image = "appdynamics/cluster-agent:latest"
 	}
 	fmt.Printf("Building deployment spec for image %s\n", clusterAgent.Spec.Image)
 	ls := labelsForClusteragent(clusterAgent)
