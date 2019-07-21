@@ -425,7 +425,10 @@ func (r *ReconcileInfraViz) newInfraVizDaemonSet(infraViz *appdynamicsv1alpha1.I
 		infraViz.Spec.BiqPort = BIQPORT
 	}
 
-	r.ensureAgentService(infraViz)
+	errSvc := r.ensureAgentService(infraViz)
+	if errSvc != nil {
+		fmt.Printf("Issues with InfraViz service: %v", errSvc)
+	}
 	r.ensureSecret(infraViz)
 
 	selector := labelsForInfraViz(infraViz)
@@ -793,6 +796,8 @@ func (r *ReconcileInfraViz) ensureAgentService(infraViz *appdynamicsv1alpha1.Inf
 	}
 
 	if err != nil && errors.IsNotFound(err) {
+		fmt.Printf("InfraViz service not found. %v\n", err)
+
 		svc := &corev1.Service{
 			TypeMeta: metav1.TypeMeta{
 				Kind:       "Service",
@@ -811,17 +816,24 @@ func (r *ReconcileInfraViz) ensureAgentService(infraViz *appdynamicsv1alpha1.Inf
 						Protocol: corev1.ProtocolTCP,
 						Port:     infraViz.Spec.BiqPort,
 					},
-					{
-						Name:     "netviz-port",
-						Protocol: corev1.ProtocolTCP,
-						Port:     infraViz.Spec.NetVizPort,
-					},
 				},
 			},
 		}
-		err = r.client.Create(context.TODO(), svc)
-		if err != nil {
-			return fmt.Errorf("Failed to create infraViz agent service: %v", err)
+
+		if infraViz.Spec.NetVizPort > 0 {
+
+			netVizPort := corev1.ServicePort{
+				Name:     "netviz-port",
+				Protocol: corev1.ProtocolTCP,
+				Port:     infraViz.Spec.NetVizPort,
+			}
+			svc.Spec.Ports = append(svc.Spec.Ports, netVizPort)
+		}
+		errCreate := r.client.Create(context.TODO(), svc)
+		if errCreate != nil {
+			return fmt.Errorf("Failed to create infraViz agent service: %v", errCreate)
+		} else {
+			fmt.Printf("Infraviz service created")
 		}
 	}
 	return nil
