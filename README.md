@@ -160,7 +160,7 @@ spec:
 | `proxyUrl` | Url of the proxy server (protocol://domain:port") | Optional |
 | `proxyUser` | Proxy user credentials (user@password) | Optional |
 | `propertyBag` | A string with any other machine agent parameters | Optional
-| `pks` | PKS deployment flag. Must be used on PKS environments|  Optiona|
+| `pks` | PKS deployment flag. Must be used on PKS environments|  Optional |
 | `enableMasters` | When set to **true** server visibility will be provided for Master nodes. By default only Worker nodes are monitored. On managed Kubernetes providers the flag has no effect, as the Master plane is not accessible | Optional
 | `image` | The Machine Agent image | "appdynamics/machine-agent-analytics:latest" |
 | `nodeSelector` | A set of nodes to deploy the daemon set pods to | Optional |
