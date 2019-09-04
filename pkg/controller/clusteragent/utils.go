@@ -287,6 +287,11 @@ func reconcileBag(bag *appdynamicsv1alpha1.AppDBag, clusterAgent *appdynamicsv1a
 		bag.InstrumentationUpdated = true
 	}
 
+	if bag.AgentOpts != clusterAgent.Spec.AgentOpts {
+		bag.AgentOpts = clusterAgent.Spec.AgentOpts
+		bag.InstrumentationUpdated = true
+	}
+
 	if clusterAgent.Spec.AppDAnalyticsLabel != "" {
 		bag.AppDAnalyticsLabel = clusterAgent.Spec.AppDAnalyticsLabel
 	}

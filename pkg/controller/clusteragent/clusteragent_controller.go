@@ -31,8 +31,10 @@ import (
 var log = logf.Log.WithName("controller_clusteragent")
 
 const (
-	AGENT_SECRET_NAME string = "cluster-agent-secret"
-	AGENt_CONFIG_NAME string = "cluster-agent-config"
+	AGENT_SECRET_NAME         string = "cluster-agent-secret"
+	AGENt_CONFIG_NAME         string = "cluster-agent-config"
+	AGENT_SSL_CONFIG_NAME     string = "appd-agent-ssl-config"
+	AGENT_SSL_CRED_STORE_NAME string = "appd-agent-ssl-store"
 )
 
 /**
@@ -450,6 +452,88 @@ func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha
 
 }
 
+func (r *ReconcileClusteragent) ensureSSLConfig(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
+
+	if clusterAgent.Spec.AgentSSLStoreName == "" {
+		return nil
+	}
+
+	//verify that AGENT_SSL_CRED_STORE_NAME config map exists.
+	//it will be copied into the respecive namespace for instrumentation
+
+	existing := &corev1.ConfigMap{}
+	errCheck := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_SSL_CRED_STORE_NAME, Namespace: clusterAgent.Namespace}, existing)
+
+	if errCheck != nil && errors.IsNotFound(errCheck) {
+		return fmt.Errorf("Custom SSL store is requested, but the expected configMap %s with the trusted certificate store not found. Put the desired certificates into the cert store and create the configMap in the %s namespace", AGENT_SSL_CRED_STORE_NAME, clusterAgent.Namespace)
+	} else if errCheck != nil {
+		return fmt.Errorf("Unable to validate the expected configMap %s with the trusted certificate store. Put the desired certificates into the cert store and create the configMap in the %s namespace", AGENT_SSL_CRED_STORE_NAME, clusterAgent.Namespace)
+	}
+
+	//	//create controller config map for ssl store credentials to be used for app agent instrumentation
+	//	xml := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
+	//<controller-info>
+	//    <controller-host></controller-host>
+	//    <controller-port></controller-port>
+	//    <controller-ssl-enabled></controller-ssl-enabled>
+	//    <use-simple-hostname>false</use-simple-hostname>
+	//    <application-name></application-name>
+	//    <tier-name></tier-name>
+	//    <node-name></node-name>
+	//    <agent-runtime-dir></agent-runtime-dir>
+	//    <enable-orchestration>false</enable-orchestration>
+	//    <use-encrypted-credentials></use-encrypted-credentials>
+	//    <credential-store-filename></credential-store-filename>
+	//    <credential-store-password></credential-store-password>
+	//    <use-ssl-client-auth>false</use-ssl-client-auth>
+	//    <asymmetric-keystore-filename></asymmetric-keystore-filename>
+	//    <asymmetric-keystore-password></asymmetric-keystore-password>
+	//    <asymmetric-key-password></asymmetric-key-password>
+	//    <asymmetric-key-alias></asymmetric-key-alias>
+	//    <account-name></account-name>
+	//    <account-access-key></account-access-key>
+	//    <force-agent-registration>false</force-agent-registration>
+	//    <controller-keystore-password>../../conf/%s</controller-keystore-password>
+	//    <controller-keystore-filename>%s</controller-keystore-filename>
+	//</controller-info>`, clusterAgent.Spec.AgentSSLStoreName, clusterAgent.Spec.AgentSSLPassword)
+
+	//	cm := &corev1.ConfigMap{}
+	//	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_SSL_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
+
+	//	create := err != nil && errors.IsNotFound(err)
+	//	if err == nil {
+	//		e := r.client.Delete(context.TODO(), cm)
+	//		if e != nil {
+	//			return fmt.Errorf("Unable to delete the old agent SSL configMap. %v", e)
+	//		}
+	//	}
+	//	if err != nil && !errors.IsNotFound(err) {
+	//		return fmt.Errorf("Unable to load agent SSL configMap. %v", err)
+	//	}
+
+	//	fmt.Printf("Recreating agent SSL Config Map\n")
+
+	//	cm.Name = AGENT_SSL_CONFIG_NAME
+	//	cm.Namespace = clusterAgent.Namespace
+	//	cm.Data = make(map[string]string)
+	//	cm.Data[clusterAgent.Spec.AgentSSLStoreName] = string(xml)
+
+	//	if create {
+	//		e := r.client.Create(context.TODO(), cm)
+	//		if e != nil {
+	//			return fmt.Errorf("Unable to create agent SSL configMap. %v", e)
+	//		}
+	//	} else {
+	//		e := r.client.Update(context.TODO(), cm)
+	//		if e != nil {
+	//			return fmt.Errorf("Unable to re-create agent SSL configMap. %v", e)
+	//		}
+	//	}
+
+	fmt.Println("SSL Configmap verified")
+	return nil
+}
+
 func (r *ReconcileClusteragent) updateMap(cm *corev1.ConfigMap, clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, create bool) (*appdynamicsv1alpha1.AppDBag, error) {
 	bag := appdynamicsv1alpha1.GetDefaultProperties()
 
@@ -581,6 +665,31 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 			},
 		}
 		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, eventVar)
+	}
+
+	//mount custom SSL cert if necessary
+	if clusterAgent.Spec.AgentSSLCert != "" {
+		if clusterAgent.Spec.CustomSSLConfigMap == "" {
+			clusterAgent.Spec.CustomSSLConfigMap = "cluster-agent-ssl-config"
+		}
+		sslVol := corev1.Volume{
+			Name: "agent-ssl-config",
+			VolumeSource: corev1.VolumeSource{
+				ConfigMap: &corev1.ConfigMapVolumeSource{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: clusterAgent.Spec.CustomSSLConfigMap,
+					},
+				},
+			},
+		}
+		dep.Spec.Template.Spec.Volumes = append(dep.Spec.Template.Spec.Volumes, sslVol)
+
+		sslMount := corev1.VolumeMount{
+			Name:      "agent-ssl-config",
+			MountPath: fmt.Sprintf("/opt/appdynamics/ssl/%s", clusterAgent.Spec.AgentSSLCert),
+			SubPath:   clusterAgent.Spec.AgentSSLCert,
+		}
+		dep.Spec.Template.Spec.Containers[0].VolumeMounts = append(dep.Spec.Template.Spec.Containers[0].VolumeMounts, sslMount)
 	}
 
 	// Set Cluster Agent instance as the owner and controller

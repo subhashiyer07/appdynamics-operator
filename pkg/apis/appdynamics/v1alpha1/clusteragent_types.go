@@ -8,21 +8,22 @@ import (
 // ClusteragentSpec defines the desired state of Clusteragent
 type ClusteragentSpec struct {
 	//account info
-	ControllerUrl   string                      `json:"controllerUrl"`
-	Account         string                      `json:"account,omitempty"`
-	GlobalAccount   string                      `json:"globalAccount,omitempty"`
-	EventServiceUrl string                      `json:"eventServiceUrl,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	Args            []string                    `json:"args,omitempty"`
-	Env             []corev1.EnvVar             `json:"env,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
-	AppName         string                      `json:"appName,omitempty"`
-	AgentServerPort int32                       `json:"agentServerPort,omitempty"`
-	SystemSSLCert   string                      `json:"systemSSLCert,omitempty"`
-	AgentSSLCert    string                      `json:"agentSSLCert,omitempty"`
-	ProxyUrl        string                      `json:"proxyUrl,omitempty"`
-	ProxyUser       string                      `json:"proxyUser,omitempty"`
-	ProxyPass       string                      `json:"proxyPass,omitempty"`
+	ControllerUrl      string                      `json:"controllerUrl"`
+	Account            string                      `json:"account,omitempty"`
+	GlobalAccount      string                      `json:"globalAccount,omitempty"`
+	EventServiceUrl    string                      `json:"eventServiceUrl,omitempty"`
+	Image              string                      `json:"image,omitempty"`
+	Args               []string                    `json:"args,omitempty"`
+	Env                []corev1.EnvVar             `json:"env,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	AppName            string                      `json:"appName,omitempty"`
+	AgentServerPort    int32                       `json:"agentServerPort,omitempty"`
+	SystemSSLCert      string                      `json:"systemSSLCert,omitempty"`
+	AgentSSLCert       string                      `json:"agentSSLCert,omitempty"`
+	CustomSSLConfigMap string                      `json:"customSSLConfigMap,omitempty"`
+	ProxyUrl           string                      `json:"proxyUrl,omitempty"`
+	ProxyUser          string                      `json:"proxyUser,omitempty"`
+	ProxyPass          string                      `json:"proxyPass,omitempty"`
 
 	//limits
 	EventAPILimit            int    `json:"eventAPILimit,omitempty"`
@@ -54,6 +55,7 @@ type ClusteragentSpec struct {
 	AgentLogOverride            string         `json:"agentLogOverride,omitempty"`
 	AgentUserOverride           string         `json:"agentUserOverride,omitempty"`
 	AgentEnvVar                 string         `json:"agentEnvVar,omitempty"`
+	AgentOpts                   string         `json:"agentOpts,omitempty"`
 	AppNameLiteral              string         `json:"appNameLiteral,omitempty"`
 	AppDAppLabel                string         `json:"appDAppLabel,omitempty"`
 	AppDTierLabel               string         `json:"appDTierLabel,omitempty"`
@@ -74,6 +76,8 @@ type ClusteragentSpec struct {
 	BiqRequestMem               string         `json:"biqRequestMem,omitempty"`
 	BiqRequestCpu               string         `json:"biqRequestCpu,omitempty"`
 	UniqueHostID                string         `json:"uniqueHostID,omitempty"`
+	AgentSSLStoreName           string         `json:"agentSSLStoreName,omitempty"`
+	AgentSSLPassword            string         `json:"agentSSLPassword,omitempty"`
 
 	//snapshot schemas
 	PodSchemaName       string `json:"podSchemaName,omitempty"`

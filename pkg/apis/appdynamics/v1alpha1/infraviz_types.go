@@ -20,15 +20,20 @@ type InfraVizSpec struct {
 	EnableContainerHostId string                      `json:"enableContainerHostId,omitempty"`
 	EnableDockerViz       string                      `json:"enableDockerViz,omitempty"`
 	EnableServerViz       string                      `json:"enableServerViz,omitempty"`
+	EnableMasters         bool                        `json:"enableMasters,omitempty"`
 	UniqieHostId          string                      `json:"uniqieHostId,omitempty"`
 	MetricsLimit          string                      `json:"metricsLimit,omitempty"`
 	ProxyUrl              string                      `json:"proxyUrl,omitempty"`
 	ProxyUser             string                      `json:"proxyUser,omitempty"`
 	LogLevel              string                      `json:"logLevel,omitempty"`
+	Pks                   bool                        `json:"pks,omitempty"`
 	NetVizPort            int32                       `json:"netVizPort,omitempty"`
 	NetVizImage           string                      `json:"netVizImage,omitempty"`
+	NetlibEnabled         int32                       `json:"netlibEnabled,omitempty"`
 	BiqPort               int32                       `json:"biqPort,omitempty"`
 	StdoutLogging         bool                        `json:"stdoutLogging,omitempty"`
+	AgentSSLStoreName     string                      `json:"agentSSLStoreName,omitempty"`
+	AgentSSLPassword      string                      `json:"agentSSLPassword,omitempty"`
 	PropertyBag           string                      `json:"propertyBag,omitempty"`
 	NodeSelector          map[string]string           `json:"nodeSelector,omitempty"`
 	Tolerations           []corev1.Toleration         `json:"tolerations,omitempty"`

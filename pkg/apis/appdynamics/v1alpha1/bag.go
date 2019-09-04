@@ -91,6 +91,7 @@ type AppDBag struct {
 	DashboardSuffix             string
 	DashboardDelayMin           int
 	AgentEnvVar                 string
+	AgentOpts                   string
 	AgentLabel                  string
 	AgentLogOverride            string
 	AgentUserOverride           string
@@ -145,6 +146,7 @@ type AppDBag struct {
 	LogLevel                    string
 	OverconsumptionThreshold    int
 	InstrumentationUpdated      bool
+	CustomSSLConfigMap          string
 }
 
 func IsBreakingProperty(fieldName string) bool {
@@ -195,6 +197,7 @@ func GetDefaultProperties() *AppDBag {
 		AgentLogOverride:            "",
 		AgentUserOverride:           "",
 		AgentEnvVar:                 "JAVA_OPTS",
+		AgentOpts:                   "",
 		AppNameLiteral:              "",
 		AppDAppLabel:                "appd-app",
 		AppDTierLabel:               "appd-tier",
@@ -232,6 +235,7 @@ func GetDefaultProperties() *AppDBag {
 		LogLevel:                    "info",
 		OverconsumptionThreshold:    80,
 		InstrumentationUpdated:      false,
+		CustomSSLConfigMap:          "",
 	}
 
 	return &bag
