@@ -4,22 +4,17 @@ metadata:
   name: k8s-cluster-agent
   namespace: appdynamics
 spec:
-  controllerUrl: "http://4511controllernoss-auto-dp0309se.srv.ravcloud.com:8090"
-  image: "docker.io/appdynamics/cluster-agent:0.3.0"
+  controllerUrl: "<http:\\acme.saas.appdynamics.com>"
+  image: "docker.io/appdynamics/cluster-agent:latest"
   logLevel: "info"
-  appName: "OpenShiftAgent"
-  instrumentationMethod: "none"
-  appNameLiteral: "Sabre"
-  netVizPort: 3892
+  appName: "ClusterAgent"
+  instrumentationMethod: "mountEnv"
+  appNameLiteral: "<AppDynamics App Name>"
   instrumentRule:
   - namespaces:
     - dev
     method: mountEnv
     matchString:
-    - ai
-    - world
-    - loan
-    - player
-    - api
+    - <deployment-name>
  
   
