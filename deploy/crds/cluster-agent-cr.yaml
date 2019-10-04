@@ -4,17 +4,10 @@ metadata:
   name: k8s-cluster-agent
   namespace: appdynamics
 spec:
-  controllerUrl: "<http:\\acme.saas.appdynamics.com>"
-  image: "docker.io/appdynamics/cluster-agent:latest"
-  logLevel: "info"
-  appName: "ClusterAgent"
-  instrumentationMethod: "mountEnv"
-  appNameLiteral: "<AppDynamics App Name>"
-  instrumentRule:
-  - namespaces:
-    - dev
-    method: mountEnv
-    matchString:
-    - <deployment-name>
+  controllerUrl: "https://saas.appdynamics.com"
+  account: "<account-name>"
+  appName: "<cluster-name>"
+ 
+
  
   

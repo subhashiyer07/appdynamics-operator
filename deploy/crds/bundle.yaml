@@ -4,16 +4,9 @@ metadata:
   name: k8s-cluster-agent
   namespace: appdynamics
 spec:
-  controllerUrl: "http://appdynamics.com"
-  image: "docker.io/appdynamics/cluster-agent:latest"
-  appName: "GKEAgent"
-  instrumentationMethod: "mountEnv"
-  instrumentMatchString:  # full match or regex of the deployment names that you want to instrument.
-  - client-api
-  nsToInstrument:  # namespace to instrument
-  - dev
-  biqService: "proxy"
-  appDAppLabel: "platform"
+  controllerUrl: "https://saas.appdynamics.com"
+  account: "<account-name>"
+  appName: "<cluster-name>"
 ---
 apiVersion: appdynamics.com/v1alpha1
 kind: InfraViz

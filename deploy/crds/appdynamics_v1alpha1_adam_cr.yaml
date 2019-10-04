@@ -1,0 +1,7 @@
+apiVersion: appdynamics.com/v1alpha1
+kind: Adam
+metadata:
+  name: example-adam
+spec:
+  # Add fields here
+  size: 3

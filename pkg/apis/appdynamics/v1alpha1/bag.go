@@ -167,7 +167,7 @@ func GetDefaultProperties() *AppDBag {
 		NodeName:                    "Node1",
 		AgentServerPort:             8989,
 		SystemSSLCert:               "/opt/appdynamics/ssl/appdsaascert.pem",
-		AgentSSLCert:                "",
+		AgentSSLCert:                "custom-ssl.pem",
 		EventAPILimit:               100,
 		MetricsSyncInterval:         60,
 		SnapshotSyncInterval:        30,
