@@ -395,7 +395,10 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 }
 
 func (r *ReconcileClusteragent) ensureAgentMonConfig(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
-
+	if clusterAgent.Spec.MetricsSyncInterval == 0 {
+		clusterAgent.Spec.MetricsSyncInterval = 30
+	}
+	
 	yml := fmt.Sprintf(`metric-collection-interval-seconds: %d
 container-filter:
   blacklisted-label:
