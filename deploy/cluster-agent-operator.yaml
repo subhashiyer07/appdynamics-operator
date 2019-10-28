@@ -104,7 +104,7 @@ metadata:
   name: appdynamics-infraviz
   namespace: appdynamics
 ---
-apiVersion: extensions/v1beta1
+apiVersion: policy/v1beta1
 kind: PodSecurityPolicy
 metadata:
   name: appdynamics-infraviz
