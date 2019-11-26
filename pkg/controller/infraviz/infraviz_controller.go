@@ -249,18 +249,22 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 		arr := strings.Split(infraViz.Spec.ProxyUrl, ":")
 		if len(arr) != 3 {
 			fmt.Println("ProxyUrl is invalid. Use this format: protocol://domain:port")
+			return breakingChanges, fmt.Errorf("ProxyUrl is invalid. Use this format: protocol://domain:port")
+		} else {
+			proxyHost = strings.TrimLeft(arr[1], "//")
+			proxyPort = arr[2]
 		}
-		proxyHost = strings.TrimLeft(arr[1], "//")
-		proxyPort = arr[2]
 	}
 
 	if infraViz.Spec.ProxyUser != "" {
 		arr := strings.Split(infraViz.Spec.ProxyUser, "@")
 		if len(arr) != 2 {
 			fmt.Println("ProxyUser is invalid. Use this format: user@pass")
+			return breakingChanges, fmt.Errorf("ProxyUser is invalid. Use this format: user@pass")
+		} else {
+			proxyUser = arr[0]
+			proxyPass = arr[1]
 		}
-		proxyUser = arr[0]
-		proxyPass = arr[1]
 	}
 
 	if infraViz.Spec.LogLevel != "" {
