@@ -560,8 +560,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 						Resources:       clusterAgent.Spec.Resources,
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      "agent-mon-config",
-							MountPath: "/opt/appdynamics/cluster-agent/config/agent-monitoring.yml",
-							SubPath:   "agent-monitoring.yml",
+							MountPath: "/opt/appdynamics/cluster-agent/config/agent-monitoring/",
 						},
 							{
 								Name:      "agent-log",
