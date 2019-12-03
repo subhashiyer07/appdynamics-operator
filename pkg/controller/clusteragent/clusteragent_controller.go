@@ -352,6 +352,35 @@ func validateControllerUrl(controllerUrl string) (error, string, uint16, string)
 	}
 }
 
+func validateProxyUrl(proxyUrl string) (error, string, int) {
+	if strings.Contains(proxyUrl, "http") {
+		arr := strings.Split(proxyUrl, ":")
+		if len(arr) > 3 || len(arr) < 2 {
+			return fmt.Errorf("Proxy URL is invalid. Use this format: protocol://url:port"), "", 0
+		}
+		protocol := arr[0]
+		proxyHost := strings.TrimLeft(arr[1], "//")
+		proxyPort := 0
+		if len(arr) != 3 {
+			if strings.Contains(protocol, "s") {
+				proxyPort = 443
+			} else {
+				proxyPort = 80
+			}
+		} else {
+			port, errPort := strconv.Atoi(arr[2])
+			if errPort != nil {
+				return fmt.Errorf("Proxy port is invalid. %v", errPort), "", 0
+			}
+			proxyPort = port
+		}
+
+		return nil, proxyHost, proxyPort
+	} else {
+		return fmt.Errorf("Proxy Url is invalid. Use this format: protocol://dns:port"), "", 0
+	}
+}
+
 func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
 
 	cm := &corev1.ConfigMap{}
@@ -370,6 +399,11 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 
 	portVal := strconv.Itoa(int(port))
 
+	errVal, proxyHost, proxyPort := validateProxyUrl(clusterAgent.Spec.proxyUrl)
+	if errVal != nil {
+		return errVal
+	}
+
 	cm.Name = AGENT_CONFIG_NAME
 	cm.Namespace = clusterAgent.Namespace
 	cm.Data = make(map[string]string)
@@ -378,6 +412,8 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 	cm.Data["APPDYNAMICS_CONTROLLER_PORT"] = portVal
 	cm.Data["APPDYNAMICS_CONTROLLER_SSL_ENABLED"] = sslEnabled
 	cm.Data["APPDYNAMICS_CLUSTER_NAME"] = clusterAgent.Spec.AppName
+	cm.Data["APPDYNAMICS_AGENT_PROXY_HOST"] = proxyHost
+	cm.Data["APPDYNAMICS_AGENT_PROXY_PORT"] = strconv.Itoa(proxyPort)
 
 	cm.Data["APPDYNAMICS_CLUSTER_MONITORED_NAMESPACES"] = strings.Join(clusterAgent.Spec.NsToMonitor, ",")
 	cm.Data["APPDYNAMICS_CLUSTER_EVENT_UPLOAD_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.EventUploadInterval)
@@ -449,7 +485,7 @@ func (r *ReconcileClusteragent) ensureLogConfig(clusterAgent *appdynamicsv1alpha
 max-filesize-mb: %d
 max-backups: %d
 write-to-stdout: %s`, clusterAgent.Spec.LogLevel, clusterAgent.Spec.LogFileSizeMb, clusterAgent.Spec.LogFileBackups,
-	strings.ToLower(clusterAgent.Spec.StdoutLogging))
+		strings.ToLower(clusterAgent.Spec.StdoutLogging))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_LOG_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -697,8 +733,8 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&
-			clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
-			clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
+		clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
+		clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
 		clusterAgent.Spec.ContainerFilter = appdynamicsv1alpha1.ClusteragentContainerFilter{
 			BlacklistedLabels: map[string]string{"appdynamics.exclude": "true"},
 		}
