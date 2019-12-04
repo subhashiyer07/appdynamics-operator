@@ -379,6 +379,10 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 	cm.Data["APPDYNAMICS_CONTROLLER_SSL_ENABLED"] = sslEnabled
 	cm.Data["APPDYNAMICS_CLUSTER_NAME"] = clusterAgent.Spec.AppName
 
+	cm.Data["APPDYNAMICS_AGENT_PROXY_URL"] = clusterAgent.Spec.ProxyUrl
+	cm.Data["APPDYNAMICS_AGENT_PROXY_USER"] = clusterAgent.Spec.ProxyUser
+	cm.Data["APPDYNAMICS_AGENT_PROXY_PASSWORD"] = clusterAgent.Spec.ProxyPass
+
 	cm.Data["APPDYNAMICS_CLUSTER_MONITORED_NAMESPACES"] = strings.Join(clusterAgent.Spec.NsToMonitor, ",")
 	cm.Data["APPDYNAMICS_CLUSTER_EVENT_UPLOAD_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.EventUploadInterval)
 	cm.Data["APPDYNAMICS_CLUSTER_CONTAINER_REGISTRATION_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.ContainerRegistrationInterval)
@@ -449,7 +453,7 @@ func (r *ReconcileClusteragent) ensureLogConfig(clusterAgent *appdynamicsv1alpha
 max-filesize-mb: %d
 max-backups: %d
 write-to-stdout: %s`, clusterAgent.Spec.LogLevel, clusterAgent.Spec.LogFileSizeMb, clusterAgent.Spec.LogFileBackups,
-	strings.ToLower(clusterAgent.Spec.StdoutLogging))
+		strings.ToLower(clusterAgent.Spec.StdoutLogging))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_LOG_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -697,8 +701,8 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&
-			clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
-			clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
+		clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
+		clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
 		clusterAgent.Spec.ContainerFilter = appdynamicsv1alpha1.ClusteragentContainerFilter{
 			BlacklistedLabels: map[string]string{"appdynamics.exclude": "true"},
 		}
