@@ -632,7 +632,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 			}
 			dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, proxyPassword)
 		} else {
-			log.Error(err, "Unable to load secret agent-proxy-secret.")
+			log.Error(err, "Unable to load secret cluster-agent-proxy-secret for proxy password.")
 		}
 	}
 
