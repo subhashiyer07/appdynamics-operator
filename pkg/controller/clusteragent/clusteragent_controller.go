@@ -32,6 +32,7 @@ var log = logf.Log.WithName("controller_clusteragent")
 
 const (
 	AGENT_SECRET_NAME         string = "cluster-agent-secret"
+	AGENT_PROXY_SECRET_NAME   string = "cluster-agent-proxy-secret"
 	AGENT_CONFIG_NAME         string = "cluster-agent-config"
 	AGENT_MON_CONFIG_NAME     string = "cluster-agent-mon"
 	AGENT_LOG_CONFIG_NAME     string = "cluster-agent-log"
@@ -245,7 +246,7 @@ func (r *ReconcileClusteragent) ensureSecret(clusterAgent *appdynamicsv1alpha1.C
 	key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_SECRET_NAME}
 	err := r.client.Get(context.TODO(), key, secret)
 	if err != nil && errors.IsNotFound(err) {
-		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'api-user' key of the secret has a valid value", AGENT_SECRET_NAME)
+		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'controller-key' key of the secret has a valid value", AGENT_SECRET_NAME)
 
 		secret = &corev1.Secret{
 			Type: corev1.SecretTypeOpaque,
@@ -381,7 +382,6 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 
 	cm.Data["APPDYNAMICS_AGENT_PROXY_URL"] = clusterAgent.Spec.ProxyUrl
 	cm.Data["APPDYNAMICS_AGENT_PROXY_USER"] = clusterAgent.Spec.ProxyUser
-	cm.Data["APPDYNAMICS_AGENT_PROXY_PASSWORD"] = clusterAgent.Spec.ProxyPass
 
 	cm.Data["APPDYNAMICS_CLUSTER_MONITORED_NAMESPACES"] = strings.Join(clusterAgent.Spec.NsToMonitor, ",")
 	cm.Data["APPDYNAMICS_CLUSTER_EVENT_UPLOAD_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.EventUploadInterval)
@@ -597,7 +597,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 		},
 	}
 
-	//mount custom SSL cert if necessary
+	//mount custom SSL cert if necessary (can contain controller and proxy SSL certs)
 	if clusterAgent.Spec.CustomSSLSecret != "" {
 		sslVol := corev1.Volume{
 			Name: "agent-ssl-cert",
@@ -611,10 +611,29 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 
 		sslMount := corev1.VolumeMount{
 			Name:      "agent-ssl-cert",
-			MountPath: fmt.Sprintf("/opt/appdynamics/ssl/%s", clusterAgent.Spec.AgentSSLCert),
-			SubPath:   clusterAgent.Spec.AgentSSLCert,
+			MountPath: "/opt/appdynamics/ssl",
 		}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = append(dep.Spec.Template.Spec.Containers[0].VolumeMounts, sslMount)
+	}
+
+	if clusterAgent.Spec.ProxyUser != "" {
+		secret := &corev1.Secret{}
+		key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_PROXY_SECRET_NAME}
+		err := r.client.Get(context.TODO(), key, secret)
+		if err == nil {
+			proxyPassword := corev1.EnvVar{
+				Name: "APPDYNAMICS_AGENT_PROXY_PASSWORD",
+					ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_PROXY_SECRET_NAME},
+						Key:                  "proxy-password",
+					},
+				},
+			}
+			dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, proxyPassword)
+		} else {
+			log.Error(err, "Unable to load secret agent-proxy-secret.")
+		}
 	}
 
 	//save the new spec in annotations
