@@ -412,9 +412,12 @@ metadata-collection-interval-seconds: %d
 container-registration-batch-size: %d
 container-registration-max-parallel-requests: %d
 pod-registration-batch-size: %d 		
+metric-upload-retry-count: %d
+metric-upload-retry-interval-milliseconds: %d
 container-filter:
 %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.ContainerParallelRequestLimit, clusterAgent.Spec.PodBatchSize,
+		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
 		createContainerFilterString(clusterAgent))
 
 	cm := &corev1.ConfigMap{}
@@ -564,8 +567,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 						Resources:       clusterAgent.Spec.Resources,
 						VolumeMounts: []corev1.VolumeMount{{
 							Name:      "agent-mon-config",
-							MountPath: "/opt/appdynamics/cluster-agent/config/agent-monitoring.yml",
-							SubPath:   "agent-monitoring.yml",
+							MountPath: "/opt/appdynamics/cluster-agent/config/agent-monitoring/",
 						},
 							{
 								Name:      "agent-log",
@@ -717,6 +719,14 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 	if clusterAgent.Spec.PodBatchSize == 0 {
 		clusterAgent.Spec.PodBatchSize = 30
+	}
+
+	if clusterAgent.Spec.MetricUploadRetryCount == 0 {
+		clusterAgent.Spec.MetricUploadRetryCount = 3
+	}
+
+	if clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds == 0 {
+		clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds = 5
 	}
 
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&
