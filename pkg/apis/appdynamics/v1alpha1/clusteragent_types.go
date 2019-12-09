@@ -26,24 +26,26 @@ type ClusteragentSpec struct {
 	ProxyPass       string                      `json:"proxyPass,omitempty"`
 
 	//limits
-	EventAPILimit                 int    `json:"eventAPILimit,omitempty"`
-	MetricsSyncInterval           int    `json:"metricsSyncInterval,omitempty"`
-	ClusterMetricsSyncInterval    int    `json:"clusterMetricsSyncInterval,omitempty"`
-	MetadataSyncInterval          int    `json:"metadataSyncInterval,omitempty"`
-	SnapshotSyncInterval          int    `json:"snapshotSyncInterval,omitempty"`
-	EventUploadInterval           int    `json:"eventUploadInterval,omitempty"`
-	ContainerRegistrationInterval int    `json:"containerRegistrationInterval,omitempty"`
-	HttpClientTimeout             int    `json:"httpClientTimeout,omitempty"`
-	ContainerBatchSize            int    `json:"containerBatchSize,omitempty"`
-	ContainerParallelRequestLimit int    `json:"containerParallelRequestLimit,omitempty"`
-	PodBatchSize                  int    `json:"podBatchSize,omitempty"`
-	LogLines                      int    `json:"logLines,omitempty"`
-	LogLevel                      string `json:"logLevel,omitempty"`
-	LogFileSizeMb                 int    `json:"logFileSizeMb,omitempty"`
-	LogFileBackups                int    `json:"logFileBackups,omitempty"`
-	StdoutLogging                 string `json:"stdoutLogging,omitempty"`
-	PodEventNumber                int    `json:"podEventNumber,omitempty"`
-	OverconsumptionThreshold      int    `json:"overconsumptionThreshold,omitempty"`
+	EventAPILimit                         int    `json:"eventAPILimit,omitempty"`
+	MetricsSyncInterval                   int    `json:"metricsSyncInterval,omitempty"`
+	ClusterMetricsSyncInterval            int    `json:"clusterMetricsSyncInterval,omitempty"`
+	MetadataSyncInterval                  int    `json:"metadataSyncInterval,omitempty"`
+	SnapshotSyncInterval                  int    `json:"snapshotSyncInterval,omitempty"`
+	EventUploadInterval                   int    `json:"eventUploadInterval,omitempty"`
+	ContainerRegistrationInterval         int    `json:"containerRegistrationInterval,omitempty"`
+	HttpClientTimeout                     int    `json:"httpClientTimeout,omitempty"`
+	ContainerBatchSize                    int    `json:"containerBatchSize,omitempty"`
+	ContainerParallelRequestLimit         int    `json:"containerParallelRequestLimit,omitempty"`
+	PodBatchSize                          int    `json:"podBatchSize,omitempty"`
+	LogLines                              int    `json:"logLines,omitempty"`
+	LogLevel                              string `json:"logLevel,omitempty"`
+	LogFileSizeMb                         int    `json:"logFileSizeMb,omitempty"`
+	LogFileBackups                        int    `json:"logFileBackups,omitempty"`
+	StdoutLogging                         string `json:"stdoutLogging,omitempty"`
+	PodEventNumber                        int    `json:"podEventNumber,omitempty"`
+	OverconsumptionThreshold              int    `json:"overconsumptionThreshold,omitempty"`
+	MetricUploadRetryCount                int    `json:"metricUploadRetryCount,omitempty"`
+	MetricUploadRetryIntervalMilliSeconds int    `json:"metricUploadRetryIntervalMilliSeconds,omitempty"`
 
 	//instrumentation
 	InstrumentationMethod       string                      `json:"instrumentationMethod,omitempty"`

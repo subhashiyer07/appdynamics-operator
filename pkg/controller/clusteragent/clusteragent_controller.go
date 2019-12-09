@@ -408,9 +408,12 @@ metadata-collection-interval-seconds: %d
 container-registration-batch-size: %d
 container-registration-max-parallel-requests: %d
 pod-registration-batch-size: %d 		
+metric-upload-retry-count: %d
+metric-upload-retry-interval-milliseconds: %d
 container-filter:
 %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.ContainerParallelRequestLimit, clusterAgent.Spec.PodBatchSize,
+		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
 		createContainerFilterString(clusterAgent))
 
 	cm := &corev1.ConfigMap{}
@@ -449,7 +452,7 @@ func (r *ReconcileClusteragent) ensureLogConfig(clusterAgent *appdynamicsv1alpha
 max-filesize-mb: %d
 max-backups: %d
 write-to-stdout: %s`, clusterAgent.Spec.LogLevel, clusterAgent.Spec.LogFileSizeMb, clusterAgent.Spec.LogFileBackups,
-	strings.ToLower(clusterAgent.Spec.StdoutLogging))
+		strings.ToLower(clusterAgent.Spec.StdoutLogging))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_LOG_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -695,9 +698,17 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 		clusterAgent.Spec.PodBatchSize = 30
 	}
 
+	if clusterAgent.Spec.MetricUploadRetryCount == 0 {
+		clusterAgent.Spec.MetricUploadRetryCount = 3
+	}
+
+	if clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds == 0 {
+		clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds = 5
+	}
+
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&
-			clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
-			clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
+		clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
+		clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
 		clusterAgent.Spec.ContainerFilter = appdynamicsv1alpha1.ClusteragentContainerFilter{
 			BlacklistedLabels: map[string]string{"appdynamics.exclude": "true"},
 		}
