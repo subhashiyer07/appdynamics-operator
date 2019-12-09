@@ -2,7 +2,7 @@ FROM alpine:3.8
 
 LABEL name="AppDynamics ClusterAgent Operator" \
       vendor="AppDynamics" \
-      version="0.3.5" \
+      version="0.3.6" \
       release="1" \
       url="https://www.appdynamics.com" \
       summary="AppDynamics monitoring solution for applications deployed to Kubernetes clusters" \
