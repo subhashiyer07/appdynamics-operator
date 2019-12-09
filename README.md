@@ -89,13 +89,28 @@ spec:
 | ------------------------- | ------------------------------------------------------------ | -------------------------- |
 | `controllerUrl`           |  Url of the AppDynamics controller                            |       Required             |
 | `account`                 |  AppDynamics Account Name                                    |       Required             |
-| `image` | Cluster Agent image reference | During the Beta period access to the image must be requested from AppDynamics|
-| `resources` |  Definitions of resources and limits for the machine agent  | See resource recommendations below |
-| `appName` |  Name of the cluster  | Required |
+| `image` | Cluster Agent image reference | Required |
+| `resources` |  Definitions of resources and limits for the Cluster Agent | See resource recommendations below |
+| `appName` |  Name of the Cluster Agent | Required |
+| `nsToMonitor` | List of namespaces the Cluster Agent should initially monitor | Default is `default` |
+| `eventUploadInterval` | Interval in seconds at which events will be uploaded | Default 10 sec |
+| `containerRegistrationInterval` | Interval in seconds at which a container should be registered | Default 120 sec |
+| `httpClientTimeout` | HTTP client timeout value in seconds | Default 30 sec |
+| `proxyUrl` | Url of the proxy server (`protocol://domain:port`) | Not set by default | 
+| `proxyUser` | Name of the user that is authenticated by the proxy host | Not set by default |
 | `metricsSyncInterval` | Sampling interval at which metrics should be collected periodically | Default 30 sec |
+| `clusterMetricsSyncInterval` | Sampling interval at which cluster level metrics should be collected periodically | Default 60 sec |
+| `metadataSyncInterval` | Sampling interval at which metadata should be collected periodically | Default 60 sec |
+| `containerFilter` | Definitions of whitelisted/blacklisted names and blacklisted labels to filter | See container filter explanation below |
+| `containerBatchSize` | Batch size used in container registration | Default 25 sec |
+| `containerParallelRequestLimit` | Max parallel requests to controller for container registration | Default is 3 |
+| `podBatchSize` | Batch size used in pod registration | Default is 30 |
+| `metricUploadRetryCount` | Number of times metric upload action to be attempted if unsuccessful the first time | Default is 3 |
+| `metricUploadRetryIntervalMilliSeconds` | Interval between consecutive metric upload retries, in milli seconds | Default is 5 |
 | `logLevel` | Logging level (`INFO`, `DEBUG`, `WARN`, `TRACE`) | Default `INFO` |
-| `logFileSizeMb` | The maximum file size of the log in MB. | Default is 5 |
-| `logFileBackups` | The maximum number of backups the log saves. When the maximum number of backups is reached, the 3 oldest log file after the initial log file is deleted. | Default is 3 |
+| `logFileSizeMb` | Maximum file size of the log in MB | Default is 5 |
+| `logFileBackups` | Maximum number of backups the log saves. When the maximum number of backups is reached, the oldest log file after the initial log file is deleted. | Default is 3 |
+| `stdoutLogging` | Write logging info to stdout | Default is `"true"` |
 
 Example resource limits:
 
@@ -109,7 +124,24 @@ Example resource limits:
       memory: "100M"
 ```
 
-
+Example container filter:
+```
+    containerFilter:
+        blacklistedLabels:
+          appdynamics.exclude:
+            "true"
+        # blacklistedNames:
+        #   podName1:
+        #     - "containerName1"
+        #     - "containerName2"
+        #   podName2:
+        #     - "containerName1"
+        #     - "containerName2"
+        # whitelistedNames:
+        #   podName1:
+        #     - "containerName1"
+        #     - "containerName2"
+```
 
 
 ## The Machine Agent deployment
