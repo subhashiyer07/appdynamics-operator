@@ -568,10 +568,6 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 							{
 								Name:      "agent-log",
 								MountPath: "/opt/appdynamics/cluster-agent/config/logging/",
-							},
-							{
-								Name:      "appdynamics-logs",
-								MountPath: "/opt/appdynamics/cluster-agent/logs",
 							}},
 					}},
 					Volumes: []corev1.Volume{{
@@ -591,15 +587,6 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 									LocalObjectReference: corev1.LocalObjectReference{
 										Name: AGENT_LOG_CONFIG_NAME,
 									},
-								},
-							},
-						},
-						{
-							Name: "appdynamics-logs",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{
-									Medium:    "",
-									SizeLimit: nil,
 								},
 							},
 						}},
@@ -774,5 +761,6 @@ func createContainerFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent)
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames != nil {
 		containerFilterString.WriteString(parseFilterField("whitelisted-names", clusterAgent.Spec.ContainerFilter.WhitelistedNames))
 	}
+
 	return containerFilterString.String()
 }
