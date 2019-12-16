@@ -625,7 +625,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 		if err == nil {
 			proxyPassword := corev1.EnvVar{
 				Name: "APPDYNAMICS_AGENT_PROXY_PASSWORD",
-					ValueFrom: &corev1.EnvVarSource{
+				ValueFrom: &corev1.EnvVarSource{
 					SecretKeyRef: &corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_PROXY_SECRET_NAME},
 						Key:                  "proxy-password",
@@ -710,11 +710,11 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 
 	if clusterAgent.Spec.ContainerBatchSize == 0 {
-		clusterAgent.Spec.ContainerBatchSize = 25
+		clusterAgent.Spec.ContainerBatchSize = 5
 	}
 
 	if clusterAgent.Spec.ContainerParallelRequestLimit == 0 {
-		clusterAgent.Spec.ContainerParallelRequestLimit = 3
+		clusterAgent.Spec.ContainerParallelRequestLimit = 1
 	}
 
 	if clusterAgent.Spec.PodBatchSize == 0 {
@@ -722,7 +722,7 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 
 	if clusterAgent.Spec.MetricUploadRetryCount == 0 {
-		clusterAgent.Spec.MetricUploadRetryCount = 3
+		clusterAgent.Spec.MetricUploadRetryCount = 2
 	}
 
 	if clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds == 0 {
