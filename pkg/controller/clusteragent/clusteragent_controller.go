@@ -414,10 +414,12 @@ container-registration-max-parallel-requests: %d
 pod-registration-batch-size: %d 		
 metric-upload-retry-count: %d
 metric-upload-retry-interval-milliseconds: %d
+max-pods-to-register-count: %d
 container-filter:
 %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.ContainerParallelRequestLimit, clusterAgent.Spec.PodBatchSize,
 		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
+		clusterAgent.Spec.MaxPodsToRegisterCount,
 		createContainerFilterString(clusterAgent))
 
 	cm := &corev1.ConfigMap{}
@@ -727,6 +729,10 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 	if clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds == 0 {
 		clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds = 5
+	}
+
+	if clusterAgent.Spec.MaxPodsToRegisterCount == 0 {
+		clusterAgent.Spec.MaxPodsToRegisterCount = 750
 	}
 
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&
