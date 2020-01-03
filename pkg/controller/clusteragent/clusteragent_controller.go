@@ -720,7 +720,7 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 
 	if clusterAgent.Spec.PodBatchSize == 0 {
-		clusterAgent.Spec.PodBatchSize = 30
+		clusterAgent.Spec.PodBatchSize = 6
 	}
 
 	if clusterAgent.Spec.MetricUploadRetryCount == 0 {
