@@ -94,7 +94,7 @@ spec:
 | `resources` |  Definitions of resources and limits for the Cluster Agent | See resource recommendations below |
 | `appName` |  Name of the cluster. Displayed in the Controller UI as your cluster name. | Required |
 | `nsToMonitor` | List of namespaces the Cluster Agent should initially monitor | Default is `default` |
-| `eventUploadInterval` | Interval in seconds at which events are uploaded to the Controller | Default 10 sec |
+| `eventUploadInterval` | Interval in seconds at which Kubernetes warning and state-change events are uploaded to the Controller | Default 10 sec |
 | `containerRegistrationInterval` | Interval in seconds at which the Cluster Agent checks for containers and registers them with the Controller. You should only modify the default value if you want to discover running containers more frequently. The default value should be used in most environments. | Default 120 sec |
 | `httpClientTimeout` | Number of seconds after which the server call is terminated if no response is received from the Controller | Default 30 sec |
 | `customSSLSecret` | Provides the certificates to the Cluster Agent | Not set by default |
@@ -104,9 +104,9 @@ spec:
 | `clusterMetricsSyncInterval` | Interval in seconds between sending cluster-level metrics to the Controller | Default 60 sec |
 | `metadataSyncInterval` | Interval in seconds at which metadata is collected for containers and pods | Default 60 sec |
 | `containerFilter` | Definitions of whitelisted/blacklisted names and blacklisted labels to filter | Default is `blacklistedLabels: {appdynamics.exclude: true}` |
-| `containerBatchSize` |The Cluster Agent checks for containers and registers them with the Controller. This process is known as a container registration cycle. The containers are sent to the Controller in batches, and the containerBatchSize is the maximum number of containers per batch in one cycle. | Default 25 containers |
-| `containerParallelRequestLimit` | Maximum number of parallel requests to the Controller for container registration | Default is 3 |
-| `podBatchSize` | The Cluster Agent checks for pods and registers them with the Controller. This process is known as a pod registration cycle. The pods are sent to the Controller in batches, and the podBatchSize is the maximum number of pods per batch in one registration cycle. | Default 30 pods |
+| `containerBatchSize` |The Cluster Agent checks for containers and registers them with the Controller. This process is known as a container registration cycle. The containers are sent to the Controller in batches, and the containerBatchSize is the maximum number of containers per batch in one cycle. | Default 5 containers |
+| `containerParallelRequestLimit` | Maximum number of parallel requests to the Controller for container registration | Default is 1 |
+| `podBatchSize` | The Cluster Agent checks for pods and registers them with the Controller. This process is known as a pod registration cycle. The pods are sent to the Controller in batches, and the podBatchSize is the maximum number of pods per batch in one registration cycle. | Default 6 pods |
 | `metricUploadRetryCount` | Number of times metric upload action to be attempted if unsuccessful the first time | Default is 3 |
 | `metricUploadRetryIntervalMilliSeconds` | Interval between consecutive metric upload retries, in milliseconds | Default is 5 |
 | `logLevel` | Logging level (`INFO`, `DEBUG`, `WARN`, `TRACE`) | Default `INFO` |
