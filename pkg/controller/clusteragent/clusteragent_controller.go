@@ -164,6 +164,14 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the cluster agent pod...")
+
+		saveOrUpdateClusterAgentSpecAnnotation(clusterAgent, existingDeployment)
+		errUpdate := r.client.Update(context.TODO(), existingDeployment)
+		if errUpdate != nil {
+			reqLogger.Error(errUpdate, "Failed to update cluster agent", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
+			return reconcile.Result{}, errUpdate
+		}
+
 		errRestart := r.restartAgent(clusterAgent)
 		if errRestart != nil {
 			reqLogger.Error(errRestart, "Failed to restart cluster agent", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
@@ -641,6 +649,14 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 	}
 
 	//save the new spec in annotations
+	saveOrUpdateClusterAgentSpecAnnotation(clusterAgent, dep)
+
+	// Set Cluster Agent instance as the owner and controller
+	controllerutil.SetControllerReference(clusterAgent, dep, r.scheme)
+	return dep
+}
+
+func saveOrUpdateClusterAgentSpecAnnotation(clusterAgent *appdynamicsv1alpha1.Clusteragent, dep *appsv1.Deployment) {
 	jsonObj, e := json.Marshal(clusterAgent)
 	if e != nil {
 		log.Error(e, "Unable to serialize the current spec", "clusterAgent.Namespace", clusterAgent.Namespace, "clusterAgent.Name", clusterAgent.Name)
@@ -650,10 +666,6 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 		}
 		dep.Annotations[OLD_SPEC] = string(jsonObj)
 	}
-
-	// Set Cluster Agent instance as the owner and controller
-	controllerutil.SetControllerReference(clusterAgent, dep, r.scheme)
-	return dep
 }
 
 func (r *ReconcileClusteragent) restartAgent(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
