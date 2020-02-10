@@ -8,22 +8,24 @@ import (
 // ClusteragentSpec defines the desired state of Clusteragent
 type ClusteragentSpec struct {
 	//account info
-	ControllerUrl   string                      `json:"controllerUrl"`
-	Account         string                      `json:"account,omitempty"`
-	GlobalAccount   string                      `json:"globalAccount,omitempty"`
-	EventServiceUrl string                      `json:"eventServiceUrl,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	Args            []string                    `json:"args,omitempty"`
-	Env             []corev1.EnvVar             `json:"env,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
-	AppName         string                      `json:"appName,omitempty"`
-	AgentServerPort int32                       `json:"agentServerPort,omitempty"`
-	SystemSSLCert   string                      `json:"systemSSLCert,omitempty"`
-	AgentSSLCert    string                      `json:"agentSSLCert,omitempty"`
-	CustomSSLSecret string                      `json:"customSSLSecret,omitempty"`
-	ProxyUrl        string                      `json:"proxyUrl,omitempty"`
-	ProxyUser       string                      `json:"proxyUser,omitempty"`
-	ProxyPass       string                      `json:"proxyPass,omitempty"`
+	ControllerUrl      string                      `json:"controllerUrl"`
+	Account            string                      `json:"account,omitempty"`
+	GlobalAccount      string                      `json:"globalAccount,omitempty"`
+	AccessSecret       string                      `json:"accessSecret,omitempty"`
+	EventServiceUrl    string                      `json:"eventServiceUrl,omitempty"`
+	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
+	Image              string                      `json:"image,omitempty"`
+	Args               []string                    `json:"args,omitempty"`
+	Env                []corev1.EnvVar             `json:"env,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	AppName            string                      `json:"appName,omitempty"`
+	AgentServerPort    int32                       `json:"agentServerPort,omitempty"`
+	SystemSSLCert      string                      `json:"systemSSLCert,omitempty"`
+	AgentSSLCert       string                      `json:"agentSSLCert,omitempty"`
+	CustomSSLSecret    string                      `json:"customSSLSecret,omitempty"`
+	ProxyUrl           string                      `json:"proxyUrl,omitempty"`
+	ProxyUser          string                      `json:"proxyUser,omitempty"`
+	ProxyPass          string                      `json:"proxyPass,omitempty"`
 
 	//limits
 	EventAPILimit                         int    `json:"eventAPILimit,omitempty"`

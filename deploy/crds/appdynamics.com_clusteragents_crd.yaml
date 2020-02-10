@@ -394,6 +394,8 @@ spec:
               type: object
             rqSchemaName:
               type: string
+            serviceAccountName:
+              type: string
             snapshotSyncInterval:
               type: integer
             stdoutLogging:
