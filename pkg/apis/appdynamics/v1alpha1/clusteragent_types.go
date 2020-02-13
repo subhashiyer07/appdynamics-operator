@@ -8,42 +8,47 @@ import (
 // ClusteragentSpec defines the desired state of Clusteragent
 type ClusteragentSpec struct {
 	//account info
-	ControllerUrl   string                      `json:"controllerUrl"`
-	Account         string                      `json:"account,omitempty"`
-	GlobalAccount   string                      `json:"globalAccount,omitempty"`
-	EventServiceUrl string                      `json:"eventServiceUrl,omitempty"`
-	Image           string                      `json:"image,omitempty"`
-	Args            []string                    `json:"args,omitempty"`
-	Env             []corev1.EnvVar             `json:"env,omitempty"`
-	Resources       corev1.ResourceRequirements `json:"resources,omitempty"`
-	AppName         string                      `json:"appName,omitempty"`
-	AgentServerPort int32                       `json:"agentServerPort,omitempty"`
-	SystemSSLCert   string                      `json:"systemSSLCert,omitempty"`
-	AgentSSLCert    string                      `json:"agentSSLCert,omitempty"`
-	CustomSSLSecret string                      `json:"customSSLSecret,omitempty"`
-	ProxyUrl        string                      `json:"proxyUrl,omitempty"`
-	ProxyUser       string                      `json:"proxyUser,omitempty"`
-	ProxyPass       string                      `json:"proxyPass,omitempty"`
+	ControllerUrl      string                      `json:"controllerUrl"`
+	Account            string                      `json:"account,omitempty"`
+	GlobalAccount      string                      `json:"globalAccount,omitempty"`
+	AccessSecret       string                      `json:"accessSecret,omitempty"`
+	EventServiceUrl    string                      `json:"eventServiceUrl,omitempty"`
+	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
+	Image              string                      `json:"image,omitempty"`
+	Args               []string                    `json:"args,omitempty"`
+	Env                []corev1.EnvVar             `json:"env,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	AppName            string                      `json:"appName,omitempty"`
+	AgentServerPort    int32                       `json:"agentServerPort,omitempty"`
+	SystemSSLCert      string                      `json:"systemSSLCert,omitempty"`
+	AgentSSLCert       string                      `json:"agentSSLCert,omitempty"`
+	CustomSSLSecret    string                      `json:"customSSLSecret,omitempty"`
+	ProxyUrl           string                      `json:"proxyUrl,omitempty"`
+	ProxyUser          string                      `json:"proxyUser,omitempty"`
+	ProxyPass          string                      `json:"proxyPass,omitempty"`
 
 	//limits
-	EventAPILimit                 int    `json:"eventAPILimit,omitempty"`
-	MetricsSyncInterval           int    `json:"metricsSyncInterval,omitempty"`
-	ClusterMetricsSyncInterval    int    `json:"clusterMetricsSyncInterval,omitempty"`
-	MetadataSyncInterval          int    `json:"metadataSyncInterval,omitempty"`
-	SnapshotSyncInterval          int    `json:"snapshotSyncInterval,omitempty"`
-	EventUploadInterval           int    `json:"eventUploadInterval,omitempty"`
-	ContainerRegistrationInterval int    `json:"containerRegistrationInterval,omitempty"`
-	HttpClientTimeout             int    `json:"httpClientTimeout,omitempty"`
-	ContainerBatchSize            int    `json:"containerBatchSize,omitempty"`
-	ContainerParallelRequestLimit int    `json:"containerParallelRequestLimit,omitempty"`
-	PodBatchSize                  int    `json:"podBatchSize,omitempty"`
-	LogLines                      int    `json:"logLines,omitempty"`
-	LogLevel                      string `json:"logLevel,omitempty"`
-	LogFileSizeMb                 int    `json:"logFileSizeMb,omitempty"`
-	LogFileBackups                int    `json:"logFileBackups,omitempty"`
-	StdoutLogging                 string `json:"stdoutLogging,omitempty"`
-	PodEventNumber                int    `json:"podEventNumber,omitempty"`
-	OverconsumptionThreshold      int    `json:"overconsumptionThreshold,omitempty"`
+	EventAPILimit                         int    `json:"eventAPILimit,omitempty"`
+	MetricsSyncInterval                   int    `json:"metricsSyncInterval,omitempty"`
+	ClusterMetricsSyncInterval            int    `json:"clusterMetricsSyncInterval,omitempty"`
+	MetadataSyncInterval                  int    `json:"metadataSyncInterval,omitempty"`
+	SnapshotSyncInterval                  int    `json:"snapshotSyncInterval,omitempty"`
+	EventUploadInterval                   int    `json:"eventUploadInterval,omitempty"`
+	ContainerRegistrationInterval         int    `json:"containerRegistrationInterval,omitempty"`
+	HttpClientTimeout                     int    `json:"httpClientTimeout,omitempty"`
+	ContainerBatchSize                    int    `json:"containerBatchSize,omitempty"`
+	ContainerParallelRequestLimit         int    `json:"containerParallelRequestLimit,omitempty"`
+	PodBatchSize                          int    `json:"podBatchSize,omitempty"`
+	LogLines                              int    `json:"logLines,omitempty"`
+	LogLevel                              string `json:"logLevel,omitempty"`
+	LogFileSizeMb                         int    `json:"logFileSizeMb,omitempty"`
+	LogFileBackups                        int    `json:"logFileBackups,omitempty"`
+	StdoutLogging                         string `json:"stdoutLogging,omitempty"`
+	PodEventNumber                        int    `json:"podEventNumber,omitempty"`
+	OverconsumptionThreshold              int    `json:"overconsumptionThreshold,omitempty"`
+	MetricUploadRetryCount                int    `json:"metricUploadRetryCount,omitempty"`
+	MetricUploadRetryIntervalMilliSeconds int    `json:"metricUploadRetryIntervalMilliSeconds,omitempty"`
+	MaxPodsToRegisterCount                int    `json:"maxPodsToRegisterCount,omitempty"`
 
 	//instrumentation
 	InstrumentationMethod       string                      `json:"instrumentationMethod,omitempty"`

@@ -32,6 +32,7 @@ var log = logf.Log.WithName("controller_clusteragent")
 
 const (
 	AGENT_SECRET_NAME         string = "cluster-agent-secret"
+	AGENT_PROXY_SECRET_NAME   string = "cluster-agent-proxy-secret"
 	AGENT_CONFIG_NAME         string = "cluster-agent-config"
 	AGENT_MON_CONFIG_NAME     string = "cluster-agent-mon"
 	AGENT_LOG_CONFIG_NAME     string = "cluster-agent-log"
@@ -163,6 +164,14 @@ func (r *ReconcileClusteragent) Reconcile(request reconcile.Request) (reconcile.
 
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the cluster agent pod...")
+
+		saveOrUpdateClusterAgentSpecAnnotation(clusterAgent, existingDeployment)
+		errUpdate := r.client.Update(context.TODO(), existingDeployment)
+		if errUpdate != nil {
+			reqLogger.Error(errUpdate, "Failed to update cluster agent", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
+			return reconcile.Result{}, errUpdate
+		}
+
 		errRestart := r.restartAgent(clusterAgent)
 		if errRestart != nil {
 			reqLogger.Error(errRestart, "Failed to restart cluster agent", "clusterAgent.Namespace", clusterAgent.Namespace, "Deployment.Name", clusterAgent.Name)
@@ -242,15 +251,20 @@ func (r *ReconcileClusteragent) hasBreakingChanges(clusterAgent *appdynamicsv1al
 func (r *ReconcileClusteragent) ensureSecret(clusterAgent *appdynamicsv1alpha1.Clusteragent) (*corev1.Secret, error) {
 	secret := &corev1.Secret{}
 
-	key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_SECRET_NAME}
+	secretName := AGENT_SECRET_NAME
+	if clusterAgent.Spec.AccessSecret != "" {
+		secretName = clusterAgent.Spec.AccessSecret
+	}
+
+	key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: secretName}
 	err := r.client.Get(context.TODO(), key, secret)
 	if err != nil && errors.IsNotFound(err) {
-		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'api-user' key of the secret has a valid value", AGENT_SECRET_NAME)
+		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'controller-key' key of the secret has a valid value", secretName)
 
 		secret = &corev1.Secret{
 			Type: corev1.SecretTypeOpaque,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      AGENT_SECRET_NAME,
+				Name:      secretName,
 				Namespace: clusterAgent.Namespace,
 			},
 		}
@@ -263,7 +277,7 @@ func (r *ReconcileClusteragent) ensureSecret(clusterAgent *appdynamicsv1alpha1.C
 			fmt.Printf("Unable to create secret. %v\n", errCreate)
 			return nil, fmt.Errorf("Unable to get secret for cluster-agent. %v", errCreate)
 		} else {
-			fmt.Printf("Secret created. %s\n", AGENT_SECRET_NAME)
+			fmt.Printf("Secret created. %s\n", secretName)
 			errLoad := r.client.Get(context.TODO(), key, secret)
 			if errLoad != nil {
 				fmt.Printf("Unable to reload secret. %v\n", errLoad)
@@ -381,7 +395,6 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 
 	cm.Data["APPDYNAMICS_AGENT_PROXY_URL"] = clusterAgent.Spec.ProxyUrl
 	cm.Data["APPDYNAMICS_AGENT_PROXY_USER"] = clusterAgent.Spec.ProxyUser
-	cm.Data["APPDYNAMICS_AGENT_PROXY_PASSWORD"] = clusterAgent.Spec.ProxyPass
 
 	cm.Data["APPDYNAMICS_CLUSTER_MONITORED_NAMESPACES"] = strings.Join(clusterAgent.Spec.NsToMonitor, ",")
 	cm.Data["APPDYNAMICS_CLUSTER_EVENT_UPLOAD_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.EventUploadInterval)
@@ -412,9 +425,14 @@ metadata-collection-interval-seconds: %d
 container-registration-batch-size: %d
 container-registration-max-parallel-requests: %d
 pod-registration-batch-size: %d 		
+metric-upload-retry-count: %d
+metric-upload-retry-interval-milliseconds: %d
+max-pods-to-register-count: %d
 container-filter:
 %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.ContainerParallelRequestLimit, clusterAgent.Spec.PodBatchSize,
+		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
+		clusterAgent.Spec.MaxPodsToRegisterCount,
 		createContainerFilterString(clusterAgent))
 
 	cm := &corev1.ConfigMap{}
@@ -511,6 +529,16 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 	if clusterAgent.Spec.Image == "" {
 		clusterAgent.Spec.Image = "appdynamics/cluster-agent:latest"
 	}
+
+	if clusterAgent.Spec.ServiceAccountName == "" {
+		clusterAgent.Spec.ServiceAccountName = "appdynamics-operator"
+	}
+
+	secretName := AGENT_SECRET_NAME
+	if clusterAgent.Spec.AccessSecret != "" {
+		secretName = clusterAgent.Spec.AccessSecret
+	}
+
 	fmt.Printf("Building deployment spec for image %s\n", clusterAgent.Spec.Image)
 	ls := labelsForClusteragent(clusterAgent)
 	var replicas int32 = 1
@@ -533,7 +561,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 					Labels: ls,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "appdynamics-operator",
+					ServiceAccountName: clusterAgent.Spec.ServiceAccountName,
 					Containers: []corev1.Container{{
 						EnvFrom: []corev1.EnvFromSource{{
 							ConfigMapRef: &corev1.ConfigMapEnvSource{
@@ -544,7 +572,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 								Name: "APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY",
 								ValueFrom: &corev1.EnvVarSource{
 									SecretKeyRef: &corev1.SecretKeySelector{
-										LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_SECRET_NAME},
+										LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
 										Key:                  "controller-key",
 									},
 								},
@@ -596,7 +624,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 		},
 	}
 
-	//mount custom SSL cert if necessary
+	//mount custom SSL cert if necessary (can contain controller and proxy SSL certs)
 	if clusterAgent.Spec.CustomSSLSecret != "" {
 		sslVol := corev1.Volume{
 			Name: "agent-ssl-cert",
@@ -610,13 +638,40 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 
 		sslMount := corev1.VolumeMount{
 			Name:      "agent-ssl-cert",
-			MountPath: fmt.Sprintf("/opt/appdynamics/ssl/%s", clusterAgent.Spec.AgentSSLCert),
-			SubPath:   clusterAgent.Spec.AgentSSLCert,
+			MountPath: "/opt/appdynamics/ssl",
 		}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = append(dep.Spec.Template.Spec.Containers[0].VolumeMounts, sslMount)
 	}
 
+	if clusterAgent.Spec.ProxyUser != "" {
+		secret := &corev1.Secret{}
+		key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_PROXY_SECRET_NAME}
+		err := r.client.Get(context.TODO(), key, secret)
+		if err == nil {
+			proxyPassword := corev1.EnvVar{
+				Name: "APPDYNAMICS_AGENT_PROXY_PASSWORD",
+				ValueFrom: &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_PROXY_SECRET_NAME},
+						Key:                  "proxy-password",
+					},
+				},
+			}
+			dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, proxyPassword)
+		} else {
+			log.Error(err, "Unable to load secret cluster-agent-proxy-secret for proxy password.")
+		}
+	}
+
 	//save the new spec in annotations
+	saveOrUpdateClusterAgentSpecAnnotation(clusterAgent, dep)
+
+	// Set Cluster Agent instance as the owner and controller
+	controllerutil.SetControllerReference(clusterAgent, dep, r.scheme)
+	return dep
+}
+
+func saveOrUpdateClusterAgentSpecAnnotation(clusterAgent *appdynamicsv1alpha1.Clusteragent, dep *appsv1.Deployment) {
 	jsonObj, e := json.Marshal(clusterAgent)
 	if e != nil {
 		log.Error(e, "Unable to serialize the current spec", "clusterAgent.Namespace", clusterAgent.Namespace, "clusterAgent.Name", clusterAgent.Name)
@@ -626,10 +681,6 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 		}
 		dep.Annotations[OLD_SPEC] = string(jsonObj)
 	}
-
-	// Set Cluster Agent instance as the owner and controller
-	controllerutil.SetControllerReference(clusterAgent, dep, r.scheme)
-	return dep
 }
 
 func (r *ReconcileClusteragent) restartAgent(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
@@ -688,15 +739,27 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 
 	if clusterAgent.Spec.ContainerBatchSize == 0 {
-		clusterAgent.Spec.ContainerBatchSize = 25
+		clusterAgent.Spec.ContainerBatchSize = 5
 	}
 
 	if clusterAgent.Spec.ContainerParallelRequestLimit == 0 {
-		clusterAgent.Spec.ContainerParallelRequestLimit = 3
+		clusterAgent.Spec.ContainerParallelRequestLimit = 1
 	}
 
 	if clusterAgent.Spec.PodBatchSize == 0 {
-		clusterAgent.Spec.PodBatchSize = 30
+		clusterAgent.Spec.PodBatchSize = 6
+	}
+
+	if clusterAgent.Spec.MetricUploadRetryCount == 0 {
+		clusterAgent.Spec.MetricUploadRetryCount = 2
+	}
+
+	if clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds == 0 {
+		clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds = 5
+	}
+
+	if clusterAgent.Spec.MaxPodsToRegisterCount == 0 {
+		clusterAgent.Spec.MaxPodsToRegisterCount = 750
 	}
 
 	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&

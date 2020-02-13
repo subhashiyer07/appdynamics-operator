@@ -145,19 +145,11 @@ rules:
   resources:
   - pods
   - pods/log
-  - services
   - endpoints
   - persistentvolumeclaims
-  - events
-  - configmaps
-  - secrets
   - resourcequotas
   - nodes
-  verbs:
-  - '*'
-- apiGroups:
-  - ""
-  resources:
+  - events
   - namespaces
   verbs:
   - get
@@ -166,18 +158,27 @@ rules:
 - apiGroups:
   - ""
   resources:
-  - pods/exec
+  - services
+  - configmaps
+  - secrets
   verbs:
-  - create
+  - "*"
+- apiGroups:
+  - apps
+  resources:
+  - statefulsets
+  verbs:
+  - get
+  - watch
+  - list
 - apiGroups:
   - apps
   resources:
   - deployments
-  - daemonsets
   - replicasets
-  - statefulsets
+  - daemonsets
   verbs:
-  - '*'
+  - "*"
 - apiGroups: 
   - "batch"
   - "extensions"
@@ -187,13 +188,6 @@ rules:
   - "get"
   - "list"
   - "watch"
-- apiGroups:
-  - monitoring.coreos.com
-  resources:
-  - servicemonitors
-  verbs:
-  - get
-  - create
 - apiGroups:
   - metrics.k8s.io
   resources:
@@ -209,7 +203,7 @@ rules:
   - '*'
   - clusteragents
   verbs:
-  - '*'
+  - "*"
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
@@ -218,7 +212,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: appdynamics-infraviz
-  namespace: appdynamics  
+  namespace: appdynamics
 roleRef:
   kind: ClusterRole
   name: appdynamics-operator
@@ -231,7 +225,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: appdynamics-operator
-  namespace: appdynamics  
+  namespace: appdynamics
 roleRef:
   kind: ClusterRole
   name: appdynamics-operator
@@ -254,7 +248,7 @@ spec:
       serviceAccountName: appdynamics-operator
       containers:
         - name: appdynamics-operator
-          image: docker.io/appdynamics/cluster-agent-operator:latest
+          image: docker.io/appdynamics/cluster-agent-operator:0.3.2
           ports:
           - containerPort: 60000
             name: metrics
@@ -277,6 +271,3 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "appdynamics-operator"
-
-
-

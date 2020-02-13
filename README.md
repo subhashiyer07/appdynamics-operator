@@ -77,9 +77,10 @@ metadata:
   name: k8s-cluster-agent
   namespace: appdynamics
 spec:
-  controllerUrl: "https://saas.appdynamics.com"
-  account: "customer1"
-  appName: "Cluster1"
+  appName: "<app-name>"
+  controllerUrl: "<protocol>://<appdynamics-controller-host>:<port>"
+  account: "<account-name>"
+  image: "<your-docker-registry>/appdynamics/cluster-agent:tag"
 ```
 
 ### Clusteragent Configuration Settings
@@ -87,15 +88,31 @@ spec:
 
 | Parameter                 | Description                                                  | Default                    |
 | ------------------------- | ------------------------------------------------------------ | -------------------------- |
-| `controllerUrl`           |  Url of the AppDynamics controller                            |       Required             |
+| `controllerUrl`           |  Full AppDynamics Controller URL including protocol and port |       Required             |
 | `account`                 |  AppDynamics Account Name                                    |       Required             |
-| `image` | Cluster Agent image reference | During the Beta period access to the image must be requested from AppDynamics|
-| `resources` |  Definitions of resources and limits for the machine agent  | See resource recommendations below |
-| `appName` |  Name of the cluster  | Required |
-| `metricsSyncInterval` | Sampling interval at which metrics should be collected periodically | Default 30 sec |
+| `image` | Cluster Agent image reference | Required |
+| `resources` |  Definitions of resources and limits for the Cluster Agent | See resource recommendations below |
+| `appName` |  Name of the cluster. Displayed in the Controller UI as your cluster name. | Required |
+| `nsToMonitor` | List of namespaces the Cluster Agent should initially monitor | Default is `default` |
+| `eventUploadInterval` | Interval in seconds at which Kubernetes warning and state-change events are uploaded to the Controller | Default 10 sec |
+| `containerRegistrationInterval` | Interval in seconds at which the Cluster Agent checks for containers and registers them with the Controller. You should only modify the default value if you want to discover running containers more frequently. The default value should be used in most environments. | Default 120 sec |
+| `httpClientTimeout` | Number of seconds after which the server call is terminated if no response is received from the Controller | Default 30 sec |
+| `customSSLSecret` | Provides the certificates to the Cluster Agent | Not set by default |
+| `proxyUrl` | Publicly accessible hostname of the proxy (`protocol://domain:port`) | Not set by default | 
+| `proxyUser` | Proxy username associated with the basic authentication credentials | Not set by default |
+| `metricsSyncInterval` | Interval in seconds between sending container metrics to the Controller | Default 30 sec |
+| `clusterMetricsSyncInterval` | Interval in seconds between sending cluster-level metrics to the Controller | Default 60 sec |
+| `metadataSyncInterval` | Interval in seconds at which metadata is collected for containers and pods | Default 60 sec |
+| `containerFilter` | Definitions of whitelisted/blacklisted names and blacklisted labels to filter | Default is `blacklistedLabels: {appdynamics.exclude: true}` |
+| `containerBatchSize` |The Cluster Agent checks for containers and registers them with the Controller. This process is known as a container registration cycle. The containers are sent to the Controller in batches, and the containerBatchSize is the maximum number of containers per batch in one cycle. | Default 5 containers |
+| `containerParallelRequestLimit` | Maximum number of parallel requests to the Controller for container registration | Default is 1 |
+| `podBatchSize` | The Cluster Agent checks for pods and registers them with the Controller. This process is known as a pod registration cycle. The pods are sent to the Controller in batches, and the podBatchSize is the maximum number of pods per batch in one registration cycle. | Default 6 pods |
+| `metricUploadRetryCount` | Number of times metric upload action to be attempted if unsuccessful the first time | Default is 3 |
+| `metricUploadRetryIntervalMilliSeconds` | Interval between consecutive metric upload retries, in milliseconds | Default is 5 |
 | `logLevel` | Logging level (`INFO`, `DEBUG`, `WARN`, `TRACE`) | Default `INFO` |
-| `logFileSizeMb` | The maximum file size of the log in MB. | Default is 5 |
-| `logFileBackups` | The maximum number of backups the log saves. When the maximum number of backups is reached, the 3 oldest log file after the initial log file is deleted. | Default is 3 |
+| `logFileSizeMb` | Maximum file size of the log in MB | Default is 5 |
+| `logFileBackups` | Maximum number of backups the log saves. When the maximum number of backups is reached, the oldest log file after the initial log file is deleted. | Default is 3 |
+| `stdoutLogging` | By default, the Cluster Agent writes to a log file in the logs directory. The stdoutLogging parameter is provided so you can send logs to the container stdout as well. | Default is `"true"` |
 
 Example resource limits:
 
@@ -109,7 +126,55 @@ Example resource limits:
       memory: "100M"
 ```
 
-
+Here is an example of the entire spec of the ClusterAgent custom resource:
+```
+    apiVersion: appdynamics.com/v1alpha1
+    kind: Clusteragent
+    metadata:
+      name: k8s-cluster-agent
+      namespace: appdynamics
+    spec:
+      appName: "<app-name>"
+      controllerUrl: "<protocol>://<appdynamics-controller-host>:<port>"
+      account: "<account-name>"
+      # docker image info
+      image: "<your-docker-registry>/appdynamics/cluster-agent:tag"
+      nsToMonitor:
+        - "default"
+      eventUploadInterval: 10
+      containerRegistrationInterval: 120
+      httpClientTimeout: 30
+      customSSLSecret: "<secret-name>"
+      proxyUrl: "<protocol>://<domain>:<port>"
+      proxyUser: "<proxy-user>"
+      metricsSyncInterval: 30
+      clusterMetricsSyncInterval: 60
+      metadataSyncInterval: 60
+      containerBatchSize: 25
+      containerParallelRequestLimit: 3
+      podBatchSize: 30
+      metricUploadRetryCount: 3
+      metricUploadRetryIntervalMilliSeconds: 5
+      containerFilter:
+        blacklistedLabels:
+          appdynamics.exclude:
+            "true"
+        # blacklistedNames:
+        #   podName1:
+        #     - "containerName1"
+        #     - "containerName2"
+        #   podName2:
+        #     - "containerName1"
+        #     - "containerName2"
+        # whitelistedNames:
+        #   podName1:
+        #     - "containerName1"
+        #     - "containerName2"
+      logLevel: "INFO"
+      logFileSizeMb: 5
+      logFileBackups: 3
+      stdoutLogging: "true"
+```
 
 
 ## The Machine Agent deployment

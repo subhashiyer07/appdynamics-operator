@@ -507,11 +507,16 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 		infraViz.Spec.EnableContainerHostId = "true"
 	}
 
+	secretName := AGENT_SECRET_NAME
+	if infraViz.Spec.AccessSecret != "" {
+		secretName = infraViz.Spec.AccessSecret
+	}
+
 	accessKey := corev1.EnvVar{
 		Name: "APPDYNAMICS_AGENT_ACCOUNT_ACCESS_KEY",
 		ValueFrom: &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{Name: AGENT_SECRET_NAME},
+				LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
 				Key:                  "controller-key",
 			},
 		},
@@ -941,15 +946,20 @@ func (r *ReconcileInfraViz) ensureLogConfig(infraViz *appdynamicsv1alpha1.InfraV
 func (r *ReconcileInfraViz) ensureSecret(infraViz *appdynamicsv1alpha1.InfraViz) error {
 	secret := &corev1.Secret{}
 
-	key := client.ObjectKey{Namespace: infraViz.Namespace, Name: AGENT_SECRET_NAME}
+	secretName := AGENT_SECRET_NAME
+	if infraViz.Spec.AccessSecret != "" {
+		secretName = infraViz.Spec.AccessSecret
+	}
+
+	key := client.ObjectKey{Namespace: infraViz.Namespace, Name: secretName}
 	err := r.client.Get(context.TODO(), key, secret)
 	if err != nil && errors.IsNotFound(err) {
-		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'api-user' key of the secret has a valid value", AGENT_SECRET_NAME)
+		fmt.Printf("Required secret %s not found. An empty secret will be created, but the clusteragent will not start until at least the 'api-user' key of the secret has a valid value", secretName)
 
 		secret = &corev1.Secret{
 			Type: corev1.SecretTypeOpaque,
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      AGENT_SECRET_NAME,
+				Name:      secretName,
 				Namespace: infraViz.Namespace,
 			},
 		}
@@ -964,7 +974,7 @@ func (r *ReconcileInfraViz) ensureSecret(infraViz *appdynamicsv1alpha1.InfraViz)
 			fmt.Printf("Unable to create secret. %v\n", errCreate)
 			return fmt.Errorf("Unable to get secret for cluster-agent. %v", errCreate)
 		} else {
-			fmt.Printf("Secret created. %s\n", AGENT_SECRET_NAME)
+			fmt.Printf("Secret created. %s\n", secretName)
 			errLoad := r.client.Get(context.TODO(), key, secret)
 			if errLoad != nil {
 				fmt.Printf("Unable to reload secret. %v\n", errLoad)
