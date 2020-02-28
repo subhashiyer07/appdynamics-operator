@@ -39,6 +39,8 @@ const (
 	AGENT_SSL_CONFIG_NAME     string = "appd-agent-ssl-config"
 	AGENT_SSL_CRED_STORE_NAME string = "appd-agent-ssl-store"
 	OLD_SPEC                  string = "cluster-agent-spec"
+	WHITELISTED               string = "whitelisted"
+	BLACKLISTED               string = "blacklisted"
 )
 
 // Add creates a new Clusteragent Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -428,12 +430,11 @@ pod-registration-batch-size: %d
 metric-upload-retry-count: %d
 metric-upload-retry-interval-milliseconds: %d
 max-pods-to-register-count: %d
-container-filter:
-%s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
+pod-filter: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.ContainerParallelRequestLimit, clusterAgent.Spec.PodBatchSize,
 		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
 		clusterAgent.Spec.MaxPodsToRegisterCount,
-		createContainerFilterString(clusterAgent))
+		createPodFilterString(clusterAgent))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_MON_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -762,14 +763,6 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 		clusterAgent.Spec.MaxPodsToRegisterCount = 750
 	}
 
-	if clusterAgent.Spec.ContainerFilter.WhitelistedNames == nil &&
-		clusterAgent.Spec.ContainerFilter.BlacklistedNames == nil &&
-		clusterAgent.Spec.ContainerFilter.BlacklistedLabels == nil {
-		clusterAgent.Spec.ContainerFilter = appdynamicsv1alpha1.ClusteragentContainerFilter{
-			BlacklistedLabels: map[string]string{"appdynamics.exclude": "true"},
-		}
-	}
-
 	// logger defaults
 	if clusterAgent.Spec.LogLevel == "" {
 		clusterAgent.Spec.LogLevel = "INFO"
@@ -788,35 +781,49 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 	}
 }
 
-func parseFilterField(fieldName string, fieldMap map[string][]string) string {
+func parseLabelField(labels []map[string]string, labelsType string) string {
 	var stringBuilder strings.Builder
-	stringBuilder.WriteString(fmt.Sprintf("  %s: {", fieldName))
-	for key, value := range fieldMap {
-		stringBuilder.WriteString(fmt.Sprintf("%s: %s,", key, strings.Join(value, " ")))
+	stringBuilder.WriteString(" " + labelsType + "-labels: [")
+	for _, label := range labels {
+		for labelKey, labelValue := range label {
+			stringBuilder.WriteString(fmt.Sprintf("{ %s: %s },", labelKey, labelValue))
+		}
 	}
-	filterString := strings.TrimRight(stringBuilder.String(), ",")
-	return filterString + "}\n"
+	labelsString := strings.TrimRight(stringBuilder.String(), ",")
+	return labelsString
 }
 
-func createContainerFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) string {
-	var containerFilterString strings.Builder
-	if clusterAgent.Spec.ContainerFilter.BlacklistedLabels != nil {
-		var stringBuilder strings.Builder
-		stringBuilder.WriteString("  blacklisted-label: {")
-		for labelKey, labelValue := range clusterAgent.Spec.ContainerFilter.BlacklistedLabels {
-			stringBuilder.WriteString(fmt.Sprintf("%s: %s,", labelKey, labelValue))
-		}
-		blacklistedLabels := strings.TrimRight(stringBuilder.String(), ",")
-		containerFilterString.WriteString(blacklistedLabels + "}\n")
+func parseNameField(names []string, namesType string) string {
+	var stringBuilder strings.Builder
+	stringBuilder.WriteString(" " + namesType + "-names: [")
+	for _, name := range names {
+		stringBuilder.WriteString(name + ",")
+	}
+	namesString := strings.TrimRight(stringBuilder.String(), ",")
+	return namesString
+}
+
+func createPodFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) string {
+	var podFilterString strings.Builder
+	podFilterString.WriteString("{")
+	if clusterAgent.Spec.PodFilter.BlacklistedLabels != nil {
+		podFilterString.
+			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.BlacklistedLabels, BLACKLISTED) + "],")
 	}
 
-	if clusterAgent.Spec.ContainerFilter.BlacklistedNames != nil {
-		containerFilterString.WriteString(parseFilterField("blacklisted-names", clusterAgent.Spec.ContainerFilter.BlacklistedNames))
+	if clusterAgent.Spec.PodFilter.WhitelistedLabels != nil {
+		podFilterString.
+			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.WhitelistedLabels, WHITELISTED) + "],")
 	}
 
-	if clusterAgent.Spec.ContainerFilter.WhitelistedNames != nil {
-		containerFilterString.WriteString(parseFilterField("whitelisted-names", clusterAgent.Spec.ContainerFilter.WhitelistedNames))
+	if clusterAgent.Spec.PodFilter.BlacklistedNames != nil {
+		podFilterString.
+			WriteString(parseNameField(clusterAgent.Spec.PodFilter.BlacklistedNames, BLACKLISTED) + "],")
 	}
 
-	return containerFilterString.String()
+	if clusterAgent.Spec.PodFilter.WhitelistedNames != nil {
+		podFilterString.
+			WriteString(parseNameField(clusterAgent.Spec.PodFilter.WhitelistedNames, WHITELISTED) + "],")
+	}
+	return strings.TrimRight(podFilterString.String(), ",") + "}"
 }
