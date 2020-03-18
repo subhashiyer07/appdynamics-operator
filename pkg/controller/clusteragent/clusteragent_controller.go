@@ -425,13 +425,12 @@ func (r *ReconcileClusteragent) ensureAgentMonConfig(clusterAgent *appdynamicsv1
 cluster-metric-collection-interval-seconds: %d
 metadata-collection-interval-seconds: %d
 container-registration-batch-size: %d
-container-registration-max-parallel-requests: %d
-pod-registration-batch-size: %d 		
+pod-registration-batch-size: %d
 metric-upload-retry-count: %d
 metric-upload-retry-interval-milliseconds: %d
 max-pods-to-register-count: %d
 pod-filter: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
-		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.ContainerParallelRequestLimit, clusterAgent.Spec.PodBatchSize,
+		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.PodBatchSize,
 		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
 		clusterAgent.Spec.MaxPodsToRegisterCount,
 		createPodFilterString(clusterAgent))
@@ -741,10 +740,6 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 	if clusterAgent.Spec.ContainerBatchSize == 0 {
 		clusterAgent.Spec.ContainerBatchSize = 5
-	}
-
-	if clusterAgent.Spec.ContainerParallelRequestLimit == 0 {
-		clusterAgent.Spec.ContainerParallelRequestLimit = 1
 	}
 
 	if clusterAgent.Spec.PodBatchSize == 0 {

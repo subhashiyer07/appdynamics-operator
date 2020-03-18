@@ -37,7 +37,6 @@ type ClusteragentSpec struct {
 	ContainerRegistrationInterval         int    `json:"containerRegistrationInterval,omitempty"`
 	HttpClientTimeout                     int    `json:"httpClientTimeout,omitempty"`
 	ContainerBatchSize                    int    `json:"containerBatchSize,omitempty"`
-	ContainerParallelRequestLimit         int    `json:"containerParallelRequestLimit,omitempty"`
 	PodBatchSize                          int    `json:"podBatchSize,omitempty"`
 	LogLines                              int    `json:"logLines,omitempty"`
 	LogLevel                              string `json:"logLevel,omitempty"`

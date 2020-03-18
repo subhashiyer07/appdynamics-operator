@@ -2,10 +2,10 @@
 
 AppDynamics Operator simplifies the configuration and lifecycle management of the AppDynamics ClusterAgent and the AppDynamics Machine Agent on different Kubernetes distributions and OpenShift. The Operator encapsulates key operational knowledge on how to configure and upgrade the ClusterAgent and the Machine Agent. It knows, for example, which configuration changes are benign and do not require restart of the ClusterAgent, which minimizes unnecesary load on the cluster API server.
 
-The Operator is implemented using [OperatorSDK](https://github.com/operator-framework/operator-sdk) and uses Kubernetes API to maintain the desired state of the custom resources that represent the ClusterAgent and the Machine Agent. 
-When the Operator is deployed, it creates custom resource definitions (CRDs) for 2 custom resources: 
+The Operator is implemented using [OperatorSDK](https://github.com/operator-framework/operator-sdk) and uses Kubernetes API to maintain the desired state of the custom resources that represent the ClusterAgent and the Machine Agent.
+When the Operator is deployed, it creates custom resource definitions (CRDs) for 2 custom resources:
 
-* [clusteragent](https://github.com/Appdynamics/appdynamics-operator#clusteragent-deployment), which represents the ClusterAgent. 
+* [clusteragent](https://github.com/Appdynamics/appdynamics-operator#clusteragent-deployment), which represents the ClusterAgent.
 * [infraviz](https://github.com/Appdynamics/appdynamics-operator#the-machine-agent-deployment), which represents the Machine Agent bundled with netviz and analytics.
 
 
@@ -23,14 +23,14 @@ Create namespace for the operator and the ClusterAgent
    `oc new-project appdynamics --description="AppDynamics Infrastructure"`
 
 * Create Secret `cluster-agent-secret` with the following key
-  * The "controller-key" - the access key to the AppDynamics controller.  
+  * The "controller-key" - the access key to the AppDynamics controller.
 
 ```
 kubectl -n appdynamics create secret generic cluster-agent-secret \
 --from-literal=controller-key="<controller-access-key>" \
 ```
 
-* Update the image reference in the Operator deployment spec (deploy/cluster-agent-operator.yaml), if necessary. 
+* Update the image reference in the Operator deployment spec (deploy/cluster-agent-operator.yaml), if necessary.
 
 The default is "docker.io/appdynamics/cluster-agent-operator:latest".
 
@@ -49,17 +49,17 @@ oc create -f deploy/cluster-agent-operator-openshift.yaml
 
 By default "docker.io/appdynamics/cluster-agent-operator:latest" is used.
 
-[AppDynamics images](https://access.redhat.com/containers/#/product/f5e13e601dc05eaa) are also available from [Red Hat Container Catalog](https://access.redhat.com/containers/). 
+[AppDynamics images](https://access.redhat.com/containers/#/product/f5e13e601dc05eaa) are also available from [Red Hat Container Catalog](https://access.redhat.com/containers/).
 
 To enable pulling,  create a secret in the ClusterAgent namespace. In this example, namespace **appdynamics** is used and appdynamics-operator account is linked to the secret.
 
 ```
-$ oc -n appdynamics create secret docker-registry redhat-connect 
---docker-server=registry.connect.redhat.com 
---docker-username=REDHAT_CONNECT_USERNAME 
+$ oc -n appdynamics create secret docker-registry redhat-connect
+--docker-server=registry.connect.redhat.com
+--docker-username=REDHAT_CONNECT_USERNAME
 --docker-password=REDHAT_CONNECT_PASSWORD --docker-email=unused
-$ oc -n appdynamics secrets link appdynamics-operator redhat-connect 
---for=pull 
+$ oc -n appdynamics secrets link appdynamics-operator redhat-connect
+--for=pull
 ```
 
 
@@ -98,14 +98,13 @@ spec:
 | `containerRegistrationInterval` | Interval in seconds at which the Cluster Agent checks for containers and registers them with the Controller. You should only modify the default value if you want to discover running containers more frequently. The default value should be used in most environments. | Default 120 sec |
 | `httpClientTimeout` | Number of seconds after which the server call is terminated if no response is received from the Controller | Default 30 sec |
 | `customSSLSecret` | Provides the certificates to the Cluster Agent | Not set by default |
-| `proxyUrl` | Publicly accessible hostname of the proxy (`protocol://domain:port`) | Not set by default | 
+| `proxyUrl` | Publicly accessible hostname of the proxy (`protocol://domain:port`) | Not set by default |
 | `proxyUser` | Proxy username associated with the basic authentication credentials | Not set by default |
 | `metricsSyncInterval` | Interval in seconds between sending container metrics to the Controller | Default 30 sec |
 | `clusterMetricsSyncInterval` | Interval in seconds between sending cluster-level metrics to the Controller | Default 60 sec |
 | `metadataSyncInterval` | Interval in seconds at which metadata is collected for containers and pods | Default 60 sec |
-| `containerFilter` | Definitions of whitelisted/blacklisted names and blacklisted labels to filter | Default is `blacklistedLabels: {appdynamics.exclude: true}` |
+| `podFilter` | Definitions of whitelisted/blacklisted names and labels to filter pods | Not set by default |
 | `containerBatchSize` |The Cluster Agent checks for containers and registers them with the Controller. This process is known as a container registration cycle. The containers are sent to the Controller in batches, and the containerBatchSize is the maximum number of containers per batch in one cycle. | Default 5 containers |
-| `containerParallelRequestLimit` | Maximum number of parallel requests to the Controller for container registration | Default is 1 |
 | `podBatchSize` | The Cluster Agent checks for pods and registers them with the Controller. This process is known as a pod registration cycle. The pods are sent to the Controller in batches, and the podBatchSize is the maximum number of pods per batch in one registration cycle. | Default 6 pods |
 | `metricUploadRetryCount` | Number of times metric upload action to be attempted if unsuccessful the first time | Default is 3 |
 | `metricUploadRetryIntervalMilliSeconds` | Interval between consecutive metric upload retries, in milliseconds | Default is 5 |
@@ -121,7 +120,7 @@ Example resource limits:
     limits:
       cpu: 300m
       memory: "200M"
-    requests: 
+    requests:
       cpu: 200m
       memory: "100M"
 ```
@@ -151,25 +150,20 @@ Here is an example of the entire spec of the ClusterAgent custom resource:
       clusterMetricsSyncInterval: 60
       metadataSyncInterval: 60
       containerBatchSize: 25
-      containerParallelRequestLimit: 3
       podBatchSize: 30
       metricUploadRetryCount: 3
       metricUploadRetryIntervalMilliSeconds: 5
-      containerFilter:
+      podFilter:
         blacklistedLabels:
-          appdynamics.exclude:
-            "true"
-        # blacklistedNames:
-        #   podName1:
-        #     - "containerName1"
-        #     - "containerName2"
-        #   podName2:
-        #     - "containerName1"
-        #     - "containerName2"
-        # whitelistedNames:
-        #   podName1:
-        #     - "containerName1"
-        #     - "containerName2"
+          - label1: value1
+        whitelistedLabels:
+          - label1: value1
+          - label2: value2
+        whitelistedNames:
+          - name1
+        blacklistedNames:
+          - name1
+          - name2
       logLevel: "INFO"
       logFileSizeMb: 5
       logFileBackups: 3
@@ -179,7 +173,7 @@ Here is an example of the entire spec of the ClusterAgent custom resource:
 
 ## The Machine Agent deployment
 
-Appdynamics operator can be used to enable server and network visibility with AppDynamics Machine agent. 
+Appdynamics operator can be used to enable server and network visibility with AppDynamics Machine agent.
 The operator works with custom resource `infraviz` to deploy the AppDynamics Machine Agent daemon set.
 
 Here is an example of a minimalistic `infraviz` spec with the required parameters:
@@ -195,9 +189,9 @@ spec:
   image: "docker.io/appdynamics/machine-agent-analytics:latest"
   account: "<your-account-name>"
   globalAccount: "<your-global-account-name"
- 
+
 ```
- 
+
  The controller URL must be in the following format:
 ` <protocol>://<controller-domain>:<port> `
 
@@ -237,9 +231,7 @@ Example resource limits:
     limits:
       cpu: 600m
       memory: "1G"
-    requests: 
+    requests:
       cpu: 300m
       memory: "800M"
 ```
-
-
