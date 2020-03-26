@@ -643,6 +643,29 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = append(dep.Spec.Template.Spec.Containers[0].VolumeMounts, sslMount)
 	}
 
+	//security context override
+	var podSec *corev1.PodSecurityContext = nil
+	if clusterAgent.Spec.RunAsUser > 0 {
+		podSec = &corev1.PodSecurityContext{RunAsUser: &clusterAgent.Spec.RunAsUser}
+		if clusterAgent.Spec.RunAsGroup > 0 {
+			podSec.RunAsGroup = &clusterAgent.Spec.RunAsGroup
+		}
+		if clusterAgent.Spec.FSGroup > 0 {
+			podSec.FSGroup = &clusterAgent.Spec.FSGroup
+		}
+	}
+
+	if podSec != nil {
+		dep.Spec.Template.Spec.SecurityContext = podSec
+	}
+
+	//image pull secret
+	if clusterAgent.Spec.ImagePullSecret != "" {
+		dep.Spec.Template.Spec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{Name: clusterAgent.Spec.ImagePullSecret},
+		}
+	}
+
 	if clusterAgent.Spec.ProxyUser != "" {
 		secret := &corev1.Secret{}
 		key := client.ObjectKey{Namespace: clusterAgent.Namespace, Name: AGENT_PROXY_SECRET_NAME}

@@ -14,7 +14,11 @@ type ClusteragentSpec struct {
 	AccessSecret       string                      `json:"accessSecret,omitempty"`
 	EventServiceUrl    string                      `json:"eventServiceUrl,omitempty"`
 	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
+	RunAsUser          int64                       `json:"runAsUser,omitempty"`
+	RunAsGroup         int64                       `json:"runAsGroup,omitempty"`
+	FSGroup            int64                       `json:"fsGroup,omitempty"`
 	Image              string                      `json:"image,omitempty"`
+	ImagePullSecret    string                      `json:"imagePullSecret,omitempty"`
 	Args               []string                    `json:"args,omitempty"`
 	Env                []corev1.EnvVar             `json:"env,omitempty"`
 	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`

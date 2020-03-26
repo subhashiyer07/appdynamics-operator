@@ -91,6 +91,7 @@ spec:
 | `controllerUrl`           |  Full AppDynamics Controller URL including protocol and port |       Required             |
 | `account`                 |  AppDynamics Account Name                                    |       Required             |
 | `image` | Cluster Agent image reference | Required |
+| `imagePullSecret` | Name of the image pull secret | Optional
 | `resources` |  Definitions of resources and limits for the Cluster Agent | See resource recommendations below |
 | `appName` |  Name of the cluster. Displayed in the Controller UI as your cluster name. | Required |
 | `nsToMonitor` | List of namespaces the Cluster Agent should initially monitor | Default is `default` |
@@ -112,6 +113,8 @@ spec:
 | `logFileSizeMb` | Maximum file size of the log in MB | Default is 5 |
 | `logFileBackups` | Maximum number of backups the log saves. When the maximum number of backups is reached, the oldest log file after the initial log file is deleted. | Default is 3 |
 | `stdoutLogging` | By default, the Cluster Agent writes to a log file in the logs directory. The stdoutLogging parameter is provided so you can send logs to the container stdout as well. | Default is `"true"` |
+| `runAsUser` | ID of the user that will be associated with the cluster agent pod. | By default, the agent container runs as user *appdynamics*
+| `runAsGroup` | ID of the group that will be associated with the cluster agent pod. | By default, the group is *appdynamics*
 
 Example resource limits:
 
