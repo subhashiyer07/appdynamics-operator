@@ -37,11 +37,7 @@ The default is "docker.io/appdynamics/cluster-agent-operator:latest".
 
 * Deploy the Operator
 ```
-kubectl create -f deploy/cluster-agent-operator.yaml
-```
-* On OpenShift
-```
-oc create -f deploy/cluster-agent-operator-openshift.yaml
+kubectl apply -f deploy/cluster-agent-operator.yaml
 ```
 
 
@@ -79,9 +75,16 @@ metadata:
 spec:
   appName: "<app-name>"
   controllerUrl: "<protocol>://<appdynamics-controller-host>:<port>"
-  account: "<account-name>"
+  account: appdynamics-cluster-agent
   image: "<your-docker-registry>/appdynamics/cluster-agent:tag"
 ```
+
+Update [the provided spec](https://github.com/Appdynamics/appdynamics-operator/blob/master/deploy/cluster-agent.yaml) with the AppDynamics account information and deploy:
+
+```
+kubectl apply -f deploy/cluster-agent.yaml
+```
+
 
 ### Clusteragent Configuration Settings
 
@@ -197,6 +200,18 @@ spec:
 
  The controller URL must be in the following format:
 ` <protocol>://<controller-domain>:<port> `
+
+
+Use the provided specs for [Kubernetes](https://github.com/Appdynamics/appdynamics-operator/blob/master/deploy/infraviz.yaml) and [OpenShift](https://github.com/Appdynamics/appdynamics-operator/blob/master/deploy/infraviz-openshift.yaml) to deploy the Machine Agent. Make sure to update the spec with the AppDynamics account information prior to deployment.
+
+```
+kubectl apply -f deploy/infraviz.yaml
+```
+On OpenShift:
+
+```
+oc apply -f deploy/infraviz-openshift.yaml
+```
 
 ### Infraviz Configuration Settings
 
