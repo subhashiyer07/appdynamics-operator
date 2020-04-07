@@ -225,7 +225,7 @@ oc apply -f deploy/infraviz-openshift.yaml
 | `enableContainerHostId` | Flag that determines how container names are derived (pod name vs container id) | "true" |
 | `enableServerViz` |  Enable Server Visibility | "true" |
 | `enableDockerViz` | Enable Docker Container Visibiltiy | "true" |
-| `uniqieHostId` | Unique host ID in AppDynamics. | Optional |
+| `uniqueHostId` | Unique host ID in AppDynamics. | Optional |
 | `metricsLimit` | Number of metrics that the Machine Agent is allowed to post to the controller | Optional |
 | `logLevel`	| Logging level (`info` or `debug`) | `info` |
 | `stdoutLogging` | Determines if the logs are saved to a file or redirected to the console | "false" |
@@ -241,6 +241,7 @@ oc apply -f deploy/infraviz-openshift.yaml
 | `env` | List of environment variables | Optional |
 | `args` | List of command arguments | Optional
 | `resources` | Definitions of resources and limits for the machine agent  | See example below |
+| `priorityClassName` | Name of the priority class, e.g. `system-node-critical`  | Optional. If set, the infraviz resource and all dependencies including RBAC must be deployed to kube-system namespace |
 
 Example resource limits:
 

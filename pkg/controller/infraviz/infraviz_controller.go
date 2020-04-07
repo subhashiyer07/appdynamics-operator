@@ -294,10 +294,17 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 	if !create {
 		if cm.Data["APPDYNAMICS_LOG_LEVEL"] != logLevel ||
 			cm.Data["APPDYNAMICS_LOG_STDOUT"] != strconv.FormatBool(infraViz.Spec.StdoutLogging) {
-			breakingChanges = true
-			e := r.ensureLogConfig(infraViz, logLevel)
-			if e != nil {
-				return breakingChanges, e
+			breakingChanges = false
+			if strings.Contains(infraViz.Spec.Image, "4.5") {
+				e := r.ensureLogConfig(infraViz, logLevel)
+				if e != nil {
+					return breakingChanges, e
+				}
+			} else {
+				e := r.ensureLogConfigCalendar(infraViz, logLevel)
+				if e != nil {
+					return breakingChanges, e
+				}
 			}
 		}
 
@@ -320,9 +327,16 @@ func (r *ReconcileInfraViz) ensureConfigMap(infraViz *appdynamicsv1alpha1.InfraV
 		}
 
 	} else {
-		e := r.ensureLogConfig(infraViz, logLevel)
-		if e != nil {
-			return breakingChanges, e
+		if strings.Contains(infraViz.Spec.Image, "4.5") {
+			e := r.ensureLogConfig(infraViz, logLevel)
+			if e != nil {
+				return breakingChanges, e
+			}
+		} else {
+			e := r.ensureLogConfigCalendar(infraViz, logLevel)
+			if e != nil {
+				return breakingChanges, e
+			}
 		}
 	}
 
@@ -559,8 +573,7 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 				ReadOnly:  true,
 			}, {
 				Name:      "ma-log-volume",
-				MountPath: "/opt/appdynamics/conf/logging/log4j.xml",
-				SubPath:   "log4j.xml",
+				MountPath: "/opt/appdynamics/conf/logging",
 				ReadOnly:  true,
 			}},
 		}},
@@ -588,6 +601,10 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 					},
 				},
 			}},
+	}
+
+	if infraViz.Spec.PriorityClassName != "" {
+		podSpec.PriorityClassName = infraViz.Spec.PriorityClassName
 	}
 
 	if infraViz.Spec.EnableMasters {
@@ -859,6 +876,88 @@ func (r *ReconcileInfraViz) ensureSSLConfig(infraViz *appdynamicsv1alpha1.InfraV
 	return nil
 }
 
+func (r *ReconcileInfraViz) ensureLogConfigCalendar(infraViz *appdynamicsv1alpha1.InfraViz, logLevel string) error {
+
+	appender := "FileAppender"
+	if infraViz.Spec.StdoutLogging {
+		appender = "ConsoleAppender"
+	}
+
+	xml := `<?xml version="1.0" encoding="UTF-8" ?>
+<configuration status="Warn" monitorInterval="30">
+
+    <Appenders>
+        <Console name="ConsoleAppender" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{ABSOLUTE} %5p [%t] %c{1} - %m%n"/>
+        </Console>
+
+        <RollingFile name="FileAppender" fileName="${log4j:configParentLocation}/../../logs/machine-agent.log"
+                     filePattern="${log4j:configParentLocation}/../../logs/machine-agent.log.%i">
+            <PatternLayout>
+                <Pattern>[%t] %d{DATE} %5p %c{1} - %m%n</Pattern>
+            </PatternLayout>
+            <Policies>
+                <SizeBasedTriggeringPolicy size="5000 KB"/>
+            </Policies>
+            <DefaultRolloverStrategy max="5"/>
+        </RollingFile>
+    </Appenders>` + fmt.Sprintf(`
+
+    <Loggers>
+        <Logger name="com.singularity" level="%s" additivity="false">
+            <AppenderRef ref="%s"/>
+        </Logger>
+        <Logger name="com.appdynamics" level="%s" additivity="false">
+            <AppenderRef ref="%s"/>
+        </Logger>
+        <Logger name="com.singularity.ee.agent.systemagent.task.sigar.SigarAppAgentMonitor" level="%s" additivity="false">
+            <AppenderRef ref="%s"/>
+        </Logger>
+        <Root level="error">
+            <AppenderRef ref="%s"/>
+        </Root>
+    </Loggers>
+
+</configuration>`, logLevel, appender, logLevel, appender, logLevel, appender, appender)
+
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_LOG_CONFIG_NAME, Namespace: infraViz.Namespace}, cm)
+
+	create := err != nil && errors.IsNotFound(err)
+	//	if err == nil {
+	//		e := r.client.Delete(context.TODO(), cm)
+	//		if e != nil {
+	//			return fmt.Errorf("Unable to delete the old MA Log configMap. %v", e)
+	//		}
+	//	}
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("Unable to load MA Log configMap. %v", err)
+	}
+
+	//	fmt.Printf("Recreating MA Log Config Map\n")
+
+	cm.Name = AGENT_LOG_CONFIG_NAME
+	cm.Namespace = infraViz.Namespace
+	cm.Data = make(map[string]string)
+	cm.Data["log4j.xml"] = string(xml)
+
+	if create {
+		e := r.client.Create(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to create MA Log configMap. %v", e)
+		}
+	} else {
+		e := r.client.Update(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to update MA Log configMap. %v", e)
+		}
+	}
+
+	fmt.Println("Logging configuration saved.")
+	return nil
+
+}
+
 func (r *ReconcileInfraViz) ensureLogConfig(infraViz *appdynamicsv1alpha1.InfraViz, logLevel string) error {
 	appender := "FileAppender"
 	if infraViz.Spec.StdoutLogging {
@@ -910,17 +1009,17 @@ func (r *ReconcileInfraViz) ensureLogConfig(infraViz *appdynamicsv1alpha1.InfraV
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_LOG_CONFIG_NAME, Namespace: infraViz.Namespace}, cm)
 
 	create := err != nil && errors.IsNotFound(err)
-	if err == nil {
-		e := r.client.Delete(context.TODO(), cm)
-		if e != nil {
-			return fmt.Errorf("Unable to delete the old MA Log configMap. %v", e)
-		}
-	}
+	//	if err == nil {
+	//		e := r.client.Delete(context.TODO(), cm)
+	//		if e != nil {
+	//			return fmt.Errorf("Unable to delete the old MA Log configMap. %v", e)
+	//		}
+	//	}
 	if err != nil && !errors.IsNotFound(err) {
 		return fmt.Errorf("Unable to load MA Log configMap. %v", err)
 	}
 
-	fmt.Printf("Recreating MA Log Config Map\n")
+	//	fmt.Printf("Recreating MA Log Config Map\n")
 
 	cm.Name = AGENT_LOG_CONFIG_NAME
 	cm.Namespace = infraViz.Namespace
@@ -935,11 +1034,11 @@ func (r *ReconcileInfraViz) ensureLogConfig(infraViz *appdynamicsv1alpha1.InfraV
 	} else {
 		e := r.client.Update(context.TODO(), cm)
 		if e != nil {
-			return fmt.Errorf("Unable to re-create MA Log configMap. %v", e)
+			return fmt.Errorf("Unable to update MA Log configMap. %v", e)
 		}
 	}
 
-	fmt.Println("Configmap re-created")
+	fmt.Println("Logging configuration saved.")
 	return nil
 }
 

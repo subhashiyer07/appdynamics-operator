@@ -21,7 +21,7 @@ type InfraVizSpec struct {
 	EnableDockerViz       string                      `json:"enableDockerViz,omitempty"`
 	EnableServerViz       string                      `json:"enableServerViz,omitempty"`
 	EnableMasters         bool                        `json:"enableMasters,omitempty"`
-	UniqieHostId          string                      `json:"uniqieHostId,omitempty"`
+	UniqueHostId          string                      `json:"uniqueHostId,omitempty"`
 	MetricsLimit          string                      `json:"metricsLimit,omitempty"`
 	ProxyUrl              string                      `json:"proxyUrl,omitempty"`
 	ProxyUser             string                      `json:"proxyUser,omitempty"`
@@ -40,6 +40,7 @@ type InfraVizSpec struct {
 	Args                  []string                    `json:"args,omitempty"`
 	Env                   []corev1.EnvVar             `json:"env,omitempty"`
 	Resources             corev1.ResourceRequirements `json:"resources,omitempty"`
+	PriorityClassName     string                      `json:"priorityClassName,omitempty"`
 }
 
 // InfraVizStatus defines the observed state of InfraViz
