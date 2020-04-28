@@ -31,16 +31,26 @@ import (
 var log = logf.Log.WithName("controller_clusteragent")
 
 const (
-	AGENT_SECRET_NAME         string = "cluster-agent-secret"
-	AGENT_PROXY_SECRET_NAME   string = "cluster-agent-proxy-secret"
-	AGENT_CONFIG_NAME         string = "cluster-agent-config"
-	AGENT_MON_CONFIG_NAME     string = "cluster-agent-mon"
-	AGENT_LOG_CONFIG_NAME     string = "cluster-agent-log"
-	AGENT_SSL_CONFIG_NAME     string = "appd-agent-ssl-config"
-	AGENT_SSL_CRED_STORE_NAME string = "appd-agent-ssl-store"
-	OLD_SPEC                  string = "cluster-agent-spec"
-	WHITELISTED               string = "whitelisted"
-	BLACKLISTED               string = "blacklisted"
+	AGENT_SECRET_NAME           string = "cluster-agent-secret"
+	AGENT_PROXY_SECRET_NAME     string = "cluster-agent-proxy-secret"
+	AGENT_CONFIG_NAME           string = "cluster-agent-config"
+	AGENT_MON_CONFIG_NAME       string = "cluster-agent-mon"
+	AGENT_LOG_CONFIG_NAME       string = "cluster-agent-log"
+	INSTRUMENTATION_CONFIG_NAME string = "instrumentation-config"
+	AGENT_SSL_CONFIG_NAME       string = "appd-agent-ssl-config"
+	AGENT_SSL_CRED_STORE_NAME   string = "appd-agent-ssl-store"
+	OLD_SPEC                    string = "cluster-agent-spec"
+	WHITELISTED                 string = "whitelisted"
+	BLACKLISTED                 string = "blacklisted"
+
+	ENV_INSTRUMENTATION string = "Env"
+	NO_INSTRUMENTATION         = "None"
+	JAVA_LANGUAGE       string = "java"
+	AppDJavaAttachImage        = "docker.io/appdynamics/java-agent:latest"
+	AGENT_MOUNT_PATH           = "/opt/appdynamics"
+	Deployment                 = "Deployment"
+	JAVA_TOOL_OPTIONS          = "JAVA_TOOL_OPTIONS"
+	FIRST                      = "first"
 )
 
 // Add creates a new Clusteragent Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -319,6 +329,7 @@ func (r *ReconcileClusteragent) cleanUp(clusterAgent *appdynamicsv1alpha1.Cluste
 
 func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha1.Clusteragent, secret *corev1.Secret, create bool) error {
 	setClusterAgentConfigDefaults(clusterAgent)
+	setInstrumentationAgentDefaults(clusterAgent)
 
 	err := r.ensureAgentMonConfig(clusterAgent)
 	if err != nil {
@@ -326,6 +337,11 @@ func (r *ReconcileClusteragent) ensureConfigMap(clusterAgent *appdynamicsv1alpha
 	}
 
 	err = r.ensureAgentConfig(clusterAgent)
+	if err != nil {
+		return err
+	}
+
+	err = r.ensureInstrumentationConfig(clusterAgent)
 	if err != nil {
 		return err
 	}
@@ -448,6 +464,57 @@ pod-filter: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.Cluste
 	cm.Namespace = clusterAgent.Namespace
 	cm.Data = make(map[string]string)
 	cm.Data["agent-monitoring.yml"] = string(yml)
+
+	if create {
+		e := r.client.Create(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to create Agent configMap. %v", e)
+		}
+		fmt.Println("Agent Configmap created")
+	} else {
+		e := r.client.Update(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to update Agent configMap. %v", e)
+		}
+		fmt.Println("Agent Configmap updated")
+	}
+
+	return nil
+}
+
+func (r *ReconcileClusteragent) ensureInstrumentationConfig(clusterAgent *appdynamicsv1alpha1.Clusteragent) error {
+	yml := fmt.Sprintf(`instrumentation-method: %s
+default-match-string: %s
+default-label-match: %s
+image-info: %v
+default-language: %s
+ns-to-instrument: %s
+resources-to-instrument: %s
+default-env: %s
+default-custom-agent-config: %s
+default-app-name: %s
+instrument-container: %s
+container-match-string: %s
+netviz-info: %v
+ns-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
+		createLabelMapString(clusterAgent.Spec.DefaultLabelMatch), createImageInfoString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
+		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
+		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.InstrumentContainer,
+		clusterAgent.Spec.DefaultContainerMatchString, createNetvizInfoString(clusterAgent.Spec.NetvizInfo), createNsRuleString(clusterAgent.Spec.NSRules))
+
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
+
+	create := err != nil && errors.IsNotFound(err)
+
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("Unable to load Agent  configMap. %v", err)
+	}
+
+	cm.Name = INSTRUMENTATION_CONFIG_NAME
+	cm.Namespace = clusterAgent.Namespace
+	cm.Data = make(map[string]string)
+	cm.Data["instrumentation.yml"] = string(yml)
 
 	if create {
 		e := r.client.Create(context.TODO(), cm)
@@ -597,6 +664,10 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 							{
 								Name:      "agent-log",
 								MountPath: "/opt/appdynamics/cluster-agent/config/logging/",
+							},
+							{
+								Name:      "instrumentation-config",
+								MountPath: "/opt/appdynamics/cluster-agent/config/instrumentation",
 							}},
 					}},
 					Volumes: []corev1.Volume{{
@@ -609,6 +680,16 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 							},
 						},
 					},
+						{
+							Name: "instrumentation-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: INSTRUMENTATION_CONFIG_NAME,
+									},
+								},
+							},
+						},
 						{
 							Name: "agent-log",
 							VolumeSource: corev1.VolumeSource{
@@ -730,6 +811,82 @@ func labelsForClusteragent(clusterAgent *appdynamicsv1alpha1.Clusteragent) map[s
 	return map[string]string{"name": "clusterAgent", "clusterAgent_cr": clusterAgent.Name}
 }
 
+func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
+	if clusterAgent.Spec.InstrumentationMethod == "" {
+		clusterAgent.Spec.InstrumentationMethod = NO_INSTRUMENTATION
+	}
+
+	if clusterAgent.Spec.DefaultLabelMatch == nil {
+		clusterAgent.Spec.DefaultLabelMatch = make(map[string]string)
+	}
+
+	if clusterAgent.Spec.ImageInfoMap == nil {
+		clusterAgent.Spec.ImageInfoMap = map[string]appdynamicsv1alpha1.ImageInfo{
+			JAVA_LANGUAGE: {
+				Image:          AppDJavaAttachImage,
+				AgentMountPath: AGENT_MOUNT_PATH,
+			},
+		}
+	}
+
+	if clusterAgent.Spec.DefaultInstrumentationTech == "" {
+		clusterAgent.Spec.DefaultInstrumentationTech = JAVA_LANGUAGE
+	}
+
+	if clusterAgent.Spec.ResourcesToInstrument == nil {
+		clusterAgent.Spec.ResourcesToInstrument = []string{Deployment}
+	}
+
+	if clusterAgent.Spec.DefaultEnv == "" {
+		clusterAgent.Spec.DefaultEnv = JAVA_TOOL_OPTIONS
+	}
+
+	if clusterAgent.Spec.InstrumentContainer == "" {
+		clusterAgent.Spec.InstrumentContainer = FIRST
+	}
+
+	if clusterAgent.Spec.NetvizInfo == (appdynamicsv1alpha1.NetvizInfo{}) {
+		clusterAgent.Spec.NetvizInfo = appdynamicsv1alpha1.NetvizInfo{
+			BciEnabled: true,
+			Port:       3892,
+		}
+	}
+
+	setNsRuleDefault(clusterAgent)
+}
+
+func setNsRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
+	for i := range clusterAgent.Spec.NSRules {
+		if clusterAgent.Spec.NSRules[i].EnvToUse == "" {
+			clusterAgent.Spec.NSRules[i].EnvToUse = clusterAgent.Spec.DefaultEnv
+		}
+
+		if clusterAgent.Spec.NSRules[i].LabelMatch == nil {
+			clusterAgent.Spec.NSRules[i].LabelMatch = make(map[string]string)
+		}
+
+		if clusterAgent.Spec.NSRules[i].Language == "" {
+			clusterAgent.Spec.NSRules[i].Language = clusterAgent.Spec.DefaultInstrumentationTech
+		}
+
+		if clusterAgent.Spec.NSRules[i].InstrumentContainer == "" {
+			clusterAgent.Spec.NSRules[i].InstrumentContainer = clusterAgent.Spec.InstrumentContainer
+		}
+
+		if clusterAgent.Spec.NSRules[i].ContainerNameMatchString == "" {
+			clusterAgent.Spec.NSRules[i].ContainerNameMatchString = clusterAgent.Spec.DefaultContainerMatchString
+		}
+
+		if clusterAgent.Spec.NSRules[i].AppName == "" {
+			clusterAgent.Spec.NSRules[i].AppName = clusterAgent.Spec.DefaultAppName
+		}
+
+		if clusterAgent.Spec.NSRules[i].CustomAgentConfig == "" {
+			clusterAgent.Spec.NSRules[i].CustomAgentConfig = clusterAgent.Spec.DefaultCustomConfig
+		}
+	}
+}
+
 func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
 	// bootstrap-config defaults
 	if clusterAgent.Spec.NsToMonitor == nil {
@@ -844,4 +1001,68 @@ func createPodFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) strin
 			WriteString(parseNameField(clusterAgent.Spec.PodFilter.WhitelistedNames, WHITELISTED) + "],")
 	}
 	return strings.TrimRight(podFilterString.String(), ",") + "}"
+}
+
+func createNetvizInfoString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
+	netvizInfoMap := map[string]interface{}{
+		"bci-enabled": netvizInfo.BciEnabled,
+		"port":        netvizInfo.Port,
+	}
+	json, err := json.Marshal(netvizInfoMap)
+	if err != nil {
+		fmt.Printf("Failed to marshal netviz info %v, %v", netvizInfoMap, err)
+		return ""
+	}
+	return string(json)
+}
+
+func createImageInfoString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo) string {
+	imageInfoMap := make(map[string]map[string]string)
+	for language, info := range imageInfo {
+		imageInfo := map[string]string{
+			"image":            info.Image,
+			"agent-mount-path": info.AgentMountPath,
+		}
+		imageInfoMap[strings.ToLower(language)] = imageInfo
+	}
+	json, err := json.Marshal(imageInfoMap)
+	if err != nil {
+		fmt.Printf("Failed to marshal image info %v, %v", imageInfoMap, err)
+		return ""
+	}
+	return string(json)
+}
+
+func createLabelMapString(labelMap map[string]string) string {
+	json, err := json.Marshal(labelMap)
+	if err != nil {
+		fmt.Printf("Failed to marshal label info %v, %v", labelMap, err)
+		return ""
+	}
+	return string(json)
+}
+
+func createNsRuleString(rules []appdynamicsv1alpha1.NSRule) string {
+	rulesOut := make([]map[string]interface{}, 0)
+	for _, rule := range rules {
+		ruleMap := map[string]interface{}{
+			"namespaces":             rule.NamespaceRegex,
+			"match-string":           rule.MatchString,
+			"label-match":            rule.LabelMatch,
+			"app-name":               rule.AppName,
+			"tier-name":              rule.TierName,
+			"tech":                   rule.Language,
+			"instrument-container":   rule.InstrumentContainer,
+			"container-match-string": rule.ContainerNameMatchString,
+			"custom-agent-config":    rule.CustomAgentConfig,
+			"env":                    rule.EnvToUse,
+		}
+		rulesOut = append(rulesOut, ruleMap)
+	}
+	json, err := json.Marshal(rulesOut)
+	if err != nil {
+		fmt.Printf("Failed to marshal ns rules %v, %v", rulesOut, err)
+		return ""
+	}
+	return string(json)
 }
