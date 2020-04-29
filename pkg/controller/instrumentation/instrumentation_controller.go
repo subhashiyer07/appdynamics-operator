@@ -42,6 +42,14 @@ const (
 	OLD_SPEC                    string = "cluster-agent-spec"
 	WHITELISTED                 string = "whitelisted"
 	BLACKLISTED                 string = "blacklisted"
+
+	ENV_INSTRUMENTATION string = "Env"
+	JAVA_LANGUAGE       string = "java"
+	AppDJavaAttachImage        = "docker.io/appdynamics/java-agent:latest"
+	AGENT_MOUNT_PATH           = "/opt/appdynamics"
+	Deployment                 = "Deployment"
+	JAVA_TOOL_OPTIONS          = "JAVA_TOOL_OPTIONS"
+	FIRST                      = "first"
 )
 
 // Add creates a new InstrumentationAgent Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -98,39 +106,39 @@ func (r *ReconcileInstrumentation) Reconcile(request reconcile.Request) (reconci
 	// Fetch the InstrumentationAgent instance
 	instrumentationAgent := &appdynamicsv1alpha1.InstrumentationAgent{}
 	err := r.client.Get(context.TODO(), request.NamespacedName, instrumentationAgent)
-	reqLogger.Info("Retrieved cluster agent.", "Image", instrumentationAgent.Spec.Image)
+	reqLogger.Info("Retrieved instrumentation agent.", "Image", instrumentationAgent.Spec.Image)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Return and don't requeue
-			reqLogger.Info("Cluster Agent resource not found. The object must be deleted")
+			reqLogger.Info("Instrumentation Agent resource not found. The object must be deleted")
 			r.cleanUp(nil)
 			return reconcile.Result{}, nil
 		}
 		// Error reading the object - requeue the request.
-		reqLogger.Error(err, "Failed to get Cluster Agent")
+		reqLogger.Error(err, "Failed to get Instrumentation Agent")
 		return reconcile.Result{}, err
 	}
-	reqLogger.Info("Cluster agent spec exists. Checking the corresponding deployment...")
+	reqLogger.Info("Instrumentation agent spec exists. Checking the corresponding deployment...")
 	// Check if the agent already exists in the namespace
 	existingDeployment := &appsv1.Deployment{}
 	err = r.client.Get(context.TODO(), types.NamespacedName{Name: instrumentationAgent.Name, Namespace: instrumentationAgent.Namespace}, existingDeployment)
 	if err != nil && errors.IsNotFound(err) {
 		reqLogger.Info("Removing the old instance of the configMap...")
 		r.cleanUp(instrumentationAgent)
-		reqLogger.Info("Cluster agent deployment does not exist. Creating...")
+		reqLogger.Info("Instrumentation agent deployment does not exist. Creating...")
 		reqLogger.Info("Checking the secret...")
 		secret, esecret := r.ensureSecret(instrumentationAgent)
 		if esecret != nil {
-			reqLogger.Error(esecret, "Failed to create new Cluster Agent due to secret", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+			reqLogger.Error(esecret, "Failed to create new Instrumentation Agent due to secret", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 			return reconcile.Result{}, esecret
 		}
 		reqLogger.Info("Checking the config map")
 		econfig := r.ensureConfigMap(instrumentationAgent, secret, true)
 		if econfig != nil {
-			reqLogger.Error(econfig, "Failed to create new Cluster Agent due to config map", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+			reqLogger.Error(econfig, "Failed to create new Instrumentation Agent due to config map", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 			return reconcile.Result{}, econfig
 		}
-		// Define a new deployment for the cluster agent
+		// Define a new deployment for the instrumentation agent
 		dep := r.newAgentDeployment(instrumentationAgent, secret)
 		reqLogger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = r.client.Create(context.TODO(), dep)
@@ -146,42 +154,42 @@ func (r *ReconcileInstrumentation) Reconcile(request reconcile.Request) (reconci
 		return reconcile.Result{}, err
 	}
 
-	reqLogger.Info("Cluster agent deployment exists. Checking for deltas with the current state...")
+	reqLogger.Info("Instrumentation agent deployment exists. Checking for deltas with the current state...")
 	// Ensure the deployment spec matches the new spec
 	// Differentiate between breaking changes and benign updates
 	// Check if secret has been recreated. if yes, restart pod
 	secret, errsecret := r.ensureSecret(instrumentationAgent)
 	if errsecret != nil {
-		reqLogger.Error(errsecret, "Failed to get cluster agent config secret", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+		reqLogger.Error(errsecret, "Failed to get instrumentation agent config secret", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 		return reconcile.Result{}, errsecret
 	}
 
 	reqLogger.Info("Retrieving agent config map", "Deployment.Namespace", instrumentationAgent.Namespace)
 	econfig := r.ensureConfigMap(instrumentationAgent, secret, false)
 	if econfig != nil {
-		reqLogger.Error(econfig, "Failed to obtain cluster agent config map", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+		reqLogger.Error(econfig, "Failed to obtain instrumentation agent config map", "Deployment.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 		return reconcile.Result{}, econfig
 	}
 
 	breaking, updateDeployment := r.hasBreakingChanges(instrumentationAgent, existingDeployment, secret)
 
 	if breaking {
-		fmt.Println("Breaking changes detected. Restarting the cluster agent pod...")
+		fmt.Println("Breaking changes detected. Restarting the instrumentation agent pod...")
 
 		saveOrUpdateInstrumentationAgentSpecAnnotation(instrumentationAgent, existingDeployment)
 		errUpdate := r.client.Update(context.TODO(), existingDeployment)
 		if errUpdate != nil {
-			reqLogger.Error(errUpdate, "Failed to update cluster agent", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+			reqLogger.Error(errUpdate, "Failed to update instrumentation agent", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 			return reconcile.Result{}, errUpdate
 		}
 
 		errRestart := r.restartAgent(instrumentationAgent)
 		if errRestart != nil {
-			reqLogger.Error(errRestart, "Failed to restart cluster agent", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+			reqLogger.Error(errRestart, "Failed to restart instrumentation agent", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 			return reconcile.Result{}, errRestart
 		}
 	} else if updateDeployment {
-		fmt.Println("Breaking changes detected. Updating the the cluster agent deployment...")
+		fmt.Println("Breaking changes detected. Updating the the instrumentation agent deployment...")
 		err = r.client.Update(context.TODO(), existingDeployment)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update InstrumentationAgent Deployment", "Deployment.Namespace", existingDeployment.Namespace, "Deployment.Name", existingDeployment.Name)
@@ -215,7 +223,7 @@ func (r *ReconcileInstrumentation) updateStatus(instrumentationAgent *appdynamic
 
 	err := r.client.Status().Update(context.TODO(), instrumentationAgent)
 	if err != nil {
-		log.Error(err, "Failed to update cluster agent status", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
+		log.Error(err, "Failed to update instrumentation agent status", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Deployment.Name", instrumentationAgent.Name)
 	} else {
 		log.Info("InstrumentationAgent status updated successfully", "instrumentationAgent.Namespace", instrumentationAgent.Namespace, "Date", instrumentationAgent.Status.LastUpdateTime)
 	}
@@ -319,7 +327,8 @@ func (r *ReconcileInstrumentation) cleanUp(instrumentationAgent *appdynamicsv1al
 }
 
 func (r *ReconcileInstrumentation) ensureConfigMap(instrumentationAgent *appdynamicsv1alpha1.InstrumentationAgent, secret *corev1.Secret, create bool) error {
-	setInstrumentationAgentConfigDefaults(instrumentationAgent)
+	setClusterAgentConfigDefaults(instrumentationAgent)
+	setInstrumentationAgentDefaults(instrumentationAgent)
 
 	err := r.ensureAgentMonConfig(instrumentationAgent)
 	if err != nil {
@@ -487,10 +496,10 @@ instrument-container: %s
 container-match-string: %s
 netviz-info: %v
 ns-rules: %v`, instrumentationAgent.Spec.InstrumentationMethod, instrumentationAgent.Spec.DefaultInstrumentMatchString,
-		instrumentationAgent.Spec.AgentLabel, createImageInfoString(instrumentationAgent.Spec.ImageInfoMap), instrumentationAgent.Spec.DefaultInstrumentationTech,
+		createLabelMapString(instrumentationAgent.Spec.DefaultLabelMatch), createImageInfoString(instrumentationAgent.Spec.ImageInfoMap), instrumentationAgent.Spec.DefaultInstrumentationTech,
 		instrumentationAgent.Spec.NsToInstrumentRegex, strings.Join(instrumentationAgent.Spec.ResourcesToInstrument, ","), instrumentationAgent.Spec.DefaultEnv,
 		instrumentationAgent.Spec.DefaultCustomConfig, instrumentationAgent.Spec.DefaultAppName, instrumentationAgent.Spec.InstrumentContainer,
-		instrumentationAgent.Spec.DefaultContainerMatchString, createNetvizInfoString(instrumentationAgent.Spec.NetvizInfo), instrumentationAgent.Spec.NSRules)
+		instrumentationAgent.Spec.DefaultContainerMatchString, createNetvizInfoString(instrumentationAgent.Spec.NetvizInfo), createNsRuleString(instrumentationAgent.Spec.NSRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: instrumentationAgent.Namespace}, cm)
@@ -760,7 +769,7 @@ func (r *ReconcileInstrumentation) newAgentDeployment(instrumentationAgent *appd
 	//save the new spec in annotations
 	saveOrUpdateInstrumentationAgentSpecAnnotation(instrumentationAgent, dep)
 
-	// Set Cluster Agent instance as the owner and controller
+	// Set Instrumentation Agent instance as the owner and controller
 	controllerutil.SetControllerReference(instrumentationAgent, dep, r.scheme)
 	return dep
 }
@@ -802,10 +811,82 @@ func labelsForInstrumentationAgent(instrumentationAgent *appdynamicsv1alpha1.Ins
 }
 
 func setInstrumentationAgentDefaults(instrumentationAgent *appdynamicsv1alpha1.InstrumentationAgent) {
+	if instrumentationAgent.Spec.InstrumentationMethod == "" {
+		instrumentationAgent.Spec.InstrumentationMethod = ENV_INSTRUMENTATION
+	}
 
+	if instrumentationAgent.Spec.DefaultLabelMatch == nil {
+		instrumentationAgent.Spec.DefaultLabelMatch = make(map[string]string)
+	}
+
+	if instrumentationAgent.Spec.ImageInfoMap == nil {
+		instrumentationAgent.Spec.ImageInfoMap = map[string]appdynamicsv1alpha1.ImageInfo{
+			JAVA_LANGUAGE: {
+				Image:          AppDJavaAttachImage,
+				AgentMountPath: AGENT_MOUNT_PATH,
+			},
+		}
+	}
+
+	if instrumentationAgent.Spec.DefaultInstrumentationTech == "" {
+		instrumentationAgent.Spec.DefaultInstrumentationTech = JAVA_LANGUAGE
+	}
+
+	if instrumentationAgent.Spec.ResourcesToInstrument == nil {
+		instrumentationAgent.Spec.ResourcesToInstrument = []string{Deployment}
+	}
+
+	if instrumentationAgent.Spec.DefaultEnv == "" {
+		instrumentationAgent.Spec.DefaultEnv = JAVA_TOOL_OPTIONS
+	}
+
+	if instrumentationAgent.Spec.InstrumentContainer == "" {
+		instrumentationAgent.Spec.InstrumentContainer = FIRST
+	}
+
+	if instrumentationAgent.Spec.NetvizInfo == (appdynamicsv1alpha1.NetvizInfo{}) {
+		instrumentationAgent.Spec.NetvizInfo = appdynamicsv1alpha1.NetvizInfo{
+			BciEnabled: true,
+			Port:       3892,
+		}
+	}
+
+	setNsRuleDefault(instrumentationAgent)
 }
 
-func setInstrumentationAgentConfigDefaults(instrumentationAgent *appdynamicsv1alpha1.InstrumentationAgent) {
+func setNsRuleDefault(instrumentationAgent *appdynamicsv1alpha1.InstrumentationAgent) {
+	for i := range instrumentationAgent.Spec.NSRules {
+		if instrumentationAgent.Spec.NSRules[i].EnvToUse == "" {
+			instrumentationAgent.Spec.NSRules[i].EnvToUse = instrumentationAgent.Spec.DefaultEnv
+		}
+
+		if instrumentationAgent.Spec.NSRules[i].LabelMatch == nil {
+			instrumentationAgent.Spec.NSRules[i].LabelMatch = make(map[string]string)
+		}
+
+		if instrumentationAgent.Spec.NSRules[i].Language == "" {
+			instrumentationAgent.Spec.NSRules[i].Language = instrumentationAgent.Spec.DefaultInstrumentationTech
+		}
+
+		if instrumentationAgent.Spec.NSRules[i].InstrumentContainer == "" {
+			instrumentationAgent.Spec.NSRules[i].InstrumentContainer = instrumentationAgent.Spec.InstrumentContainer
+		}
+
+		if instrumentationAgent.Spec.NSRules[i].ContainerNameMatchString == "" {
+			instrumentationAgent.Spec.NSRules[i].ContainerNameMatchString = instrumentationAgent.Spec.DefaultContainerMatchString
+		}
+
+		if instrumentationAgent.Spec.NSRules[i].AppName == "" {
+			instrumentationAgent.Spec.NSRules[i].AppName = instrumentationAgent.Spec.DefaultAppName
+		}
+
+		if instrumentationAgent.Spec.NSRules[i].CustomAgentConfig == "" {
+			instrumentationAgent.Spec.NSRules[i].CustomAgentConfig = instrumentationAgent.Spec.DefaultCustomConfig
+		}
+	}
+}
+
+func setClusterAgentConfigDefaults(instrumentationAgent *appdynamicsv1alpha1.InstrumentationAgent) {
 	// bootstrap-config defaults
 	if instrumentationAgent.Spec.NsToMonitor == nil {
 		instrumentationAgent.Spec.NsToMonitor = []string{"default"}
@@ -922,7 +1003,11 @@ func createPodFilterString(instrumentationAgent *appdynamicsv1alpha1.Instrumenta
 }
 
 func createNetvizInfoString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
-	json, err := json.Marshal(netvizInfo)
+	netvizInfoMap := map[string]interface{}{
+		"bci-enabled": netvizInfo.BciEnabled,
+		"port":        netvizInfo.Port,
+	}
+	json, err := json.Marshal(netvizInfoMap)
 	if err != nil {
 		return ""
 	}
@@ -930,7 +1015,46 @@ func createNetvizInfoString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
 }
 
 func createImageInfoString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo) string {
-	json, err := json.Marshal(imageInfo)
+	imageInfoMap := make(map[string]map[string]string)
+	for language, info := range imageInfo {
+		imageInfo := map[string]string{
+			"image":            info.Image,
+			"agent-mount-path": info.AgentMountPath,
+		}
+		imageInfoMap[strings.ToLower(language)] = imageInfo
+	}
+	json, err := json.Marshal(imageInfoMap)
+	if err != nil {
+		return ""
+	}
+	return string(json)
+}
+
+func createLabelMapString(m map[string]string) string {
+	json, err := json.Marshal(m)
+	if err != nil {
+		return ""
+	}
+	return string(json)
+}
+
+func createNsRuleString(rules []appdynamicsv1alpha1.NSRule) string {
+	rulesOut := make([]map[string]interface{}, 0)
+	for _, rule := range rules {
+		ruleMap := map[string]interface{}{
+			"namespaces":             rule.NamespaceRegex,
+			"match-string":           rule.MatchString,
+			"label-match":            rule.LabelMatch,
+			"app-name":               rule.AppName,
+			"tier-name":              rule.TierName,
+			"instrument-container":   rule.InstrumentContainer,
+			"container-match-string": rule.ContainerNameMatchString,
+			"custom-agent-config":    rule.CustomAgentConfig,
+			"env":                    rule.EnvToUse,
+		}
+		rulesOut = append(rulesOut, ruleMap)
+	}
+	json, err := json.Marshal(rulesOut)
 	if err != nil {
 		return ""
 	}

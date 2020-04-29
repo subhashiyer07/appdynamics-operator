@@ -13,6 +13,7 @@ type InstrumentationSpec struct {
 	InstrumentMatchString        []string              `json:"instrumentMatchString,omitempty"`
 	DefaultInstrumentMatchString string                `json:"defaultInstrumentMatchString,omitempty"`
 	DefaultInstrumentationTech   string                `json:"defaultInstrumentationTech,omitempty"`
+	DefaultLabelMatch            map[string]string     `json:"defaultInstrumentionLabelMatch,omitempty"`
 	NsToInstrument               []string              `json:"nsToInstrument,omitempty"`
 	NsToInstrumentRegex          string                `json:"nsToInstrumentRegex,omitempty"`
 	NsToInstrumentExclude        []string              `json:"nsToInstrumentExclude,omitempty"`
@@ -91,7 +92,7 @@ type NetvizInfo struct {
 
 type ImageInfo struct {
 	Image          string `json:"image"`
-	AgentMountPath string `json:"agent-mount-path"`
+	AgentMountPath string `json:"agentMountPath"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -104,6 +105,16 @@ type InstrumentationAgentList struct {
 }
 
 type NSRule struct {
+	NamespaceRegex           string            `json:"namespaceRegex,omitempty"`
+	MatchString              string            `json:"matchString,omitempty"`
+	LabelMatch               map[string]string `json:"labelMatch,omitempty"`
+	AppName                  string            `json:"appName,omitempty"`
+	TierName                 string            `json:"tierName,omitempty"`
+	Language                 string            `json:"language,omitempty"`
+	InstrumentContainer      string            `json:"instrumentContainer,omitempty"`
+	ContainerNameMatchString string            `json:"containerMatchString,omitempty"`
+	CustomAgentConfig        string            `json:"customAgentConfig,omitempty"`
+	EnvToUse                 string            `json:"env,omitempty"`
 }
 
 func init() {
