@@ -1051,6 +1051,7 @@ func createNsRuleString(rules []appdynamicsv1alpha1.NSRule) string {
 			"label-match":            rule.LabelMatch,
 			"app-name":               rule.AppName,
 			"tier-name":              rule.TierName,
+			"tech":                   rule.Language,
 			"instrument-container":   rule.InstrumentContainer,
 			"container-match-string": rule.ContainerNameMatchString,
 			"custom-agent-config":    rule.CustomAgentConfig,
