@@ -496,11 +496,11 @@ default-app-name: %s
 instrument-container: %s
 container-match-string: %s
 netviz-info: %v
-ns-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
+instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
 		createLabelMapString(clusterAgent.Spec.DefaultLabelMatch), createImageInfoString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.InstrumentContainer,
-		clusterAgent.Spec.DefaultContainerMatchString, createNetvizInfoString(clusterAgent.Spec.NetvizInfo), createNsRuleString(clusterAgent.Spec.NSRules))
+		clusterAgent.Spec.DefaultContainerMatchString, createNetvizInfoString(clusterAgent.Spec.NetvizInfo), createInstrumentationRulesString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -852,37 +852,41 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 		}
 	}
 
-	setNsRuleDefault(clusterAgent)
+	setInstrumentationRuleDefault(clusterAgent)
 }
 
-func setNsRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
-	for i := range clusterAgent.Spec.NSRules {
-		if clusterAgent.Spec.NSRules[i].EnvToUse == "" {
-			clusterAgent.Spec.NSRules[i].EnvToUse = clusterAgent.Spec.DefaultEnv
+func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
+	for i := range clusterAgent.Spec.InstrumentationRules {
+		if clusterAgent.Spec.InstrumentationRules[i].EnvToUse == "" {
+			clusterAgent.Spec.InstrumentationRules[i].EnvToUse = clusterAgent.Spec.DefaultEnv
 		}
 
-		if clusterAgent.Spec.NSRules[i].LabelMatch == nil {
-			clusterAgent.Spec.NSRules[i].LabelMatch = make(map[string]string)
+		if clusterAgent.Spec.InstrumentationRules[i].LabelMatch == nil {
+			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = make(map[string]string)
 		}
 
-		if clusterAgent.Spec.NSRules[i].Language == "" {
-			clusterAgent.Spec.NSRules[i].Language = clusterAgent.Spec.DefaultInstrumentationTech
+		if clusterAgent.Spec.InstrumentationRules[i].Language == "" {
+			clusterAgent.Spec.InstrumentationRules[i].Language = clusterAgent.Spec.DefaultInstrumentationTech
 		}
 
-		if clusterAgent.Spec.NSRules[i].InstrumentContainer == "" {
-			clusterAgent.Spec.NSRules[i].InstrumentContainer = clusterAgent.Spec.InstrumentContainer
+		if clusterAgent.Spec.InstrumentationRules[i].ImageInfo == (appdynamicsv1alpha1.ImageInfo{}) {
+			clusterAgent.Spec.InstrumentationRules[i].ImageInfo = clusterAgent.Spec.ImageInfoMap[clusterAgent.Spec.InstrumentationRules[i].Language]
 		}
 
-		if clusterAgent.Spec.NSRules[i].ContainerNameMatchString == "" {
-			clusterAgent.Spec.NSRules[i].ContainerNameMatchString = clusterAgent.Spec.DefaultContainerMatchString
+		if clusterAgent.Spec.InstrumentationRules[i].InstrumentContainer == "" {
+			clusterAgent.Spec.InstrumentationRules[i].InstrumentContainer = clusterAgent.Spec.InstrumentContainer
 		}
 
-		if clusterAgent.Spec.NSRules[i].AppName == "" {
-			clusterAgent.Spec.NSRules[i].AppName = clusterAgent.Spec.DefaultAppName
+		if clusterAgent.Spec.InstrumentationRules[i].ContainerNameMatchString == "" {
+			clusterAgent.Spec.InstrumentationRules[i].ContainerNameMatchString = clusterAgent.Spec.DefaultContainerMatchString
 		}
 
-		if clusterAgent.Spec.NSRules[i].CustomAgentConfig == "" {
-			clusterAgent.Spec.NSRules[i].CustomAgentConfig = clusterAgent.Spec.DefaultCustomConfig
+		if clusterAgent.Spec.InstrumentationRules[i].AppName == "" {
+			clusterAgent.Spec.InstrumentationRules[i].AppName = clusterAgent.Spec.DefaultAppName
+		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].CustomAgentConfig == "" {
+			clusterAgent.Spec.InstrumentationRules[i].CustomAgentConfig = clusterAgent.Spec.DefaultCustomConfig
 		}
 	}
 }
@@ -1042,7 +1046,7 @@ func createLabelMapString(labelMap map[string]string) string {
 	return string(json)
 }
 
-func createNsRuleString(rules []appdynamicsv1alpha1.NSRule) string {
+func createInstrumentationRulesString(rules []appdynamicsv1alpha1.InstrumentationRule) string {
 	rulesOut := make([]map[string]interface{}, 0)
 	for _, rule := range rules {
 		ruleMap := map[string]interface{}{
@@ -1051,11 +1055,12 @@ func createNsRuleString(rules []appdynamicsv1alpha1.NSRule) string {
 			"label-match":            rule.LabelMatch,
 			"app-name":               rule.AppName,
 			"tier-name":              rule.TierName,
-			"tech":                   rule.Language,
+			"language":               rule.Language,
 			"instrument-container":   rule.InstrumentContainer,
 			"container-match-string": rule.ContainerNameMatchString,
 			"custom-agent-config":    rule.CustomAgentConfig,
 			"env":                    rule.EnvToUse,
+			"image-info":             rule.ImageInfo,
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}

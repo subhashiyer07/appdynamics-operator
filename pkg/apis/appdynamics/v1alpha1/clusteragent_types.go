@@ -70,7 +70,7 @@ type ClusteragentSpec struct {
 	DefaultAppName               string                `json:"defaultAppName,omitempty"`
 	DefaultContainerMatchString  string                `json:"defaultContainerMatchString,omitempty"`
 	NetvizInfo                   NetvizInfo            `json:"netvizInfo,omitempty"`
-	NSRules                      []NSRule              `json:"namespaceRules,omitempty"`
+	InstrumentationRules         []InstrumentationRule `json:"instrumentationRules,omitempty"`
 	NodesToMonitor               []string              `json:"nodesToMonitor,omitempty"`
 	NodesToMonitorExclude        []string              `json:"nodesToMonitorExclude,omitempty"`
 	InstrumentRule               []AgentRequest        `json:"instrumentRule,omitempty"`
@@ -175,7 +175,7 @@ type ClusteragentList struct {
 	Items           []Clusteragent `json:"items"`
 }
 
-type NSRule struct {
+type InstrumentationRule struct {
 	NamespaceRegex           string            `json:"namespaceRegex,omitempty"`
 	MatchString              string            `json:"matchString,omitempty"`
 	LabelMatch               map[string]string `json:"labelMatch,omitempty"`
@@ -186,6 +186,7 @@ type NSRule struct {
 	ContainerNameMatchString string            `json:"containerMatchString,omitempty"`
 	CustomAgentConfig        string            `json:"customAgentConfig,omitempty"`
 	EnvToUse                 string            `json:"env,omitempty"`
+	ImageInfo                ImageInfo         `json:"image-info,omitempty"`
 }
 
 func init() {
