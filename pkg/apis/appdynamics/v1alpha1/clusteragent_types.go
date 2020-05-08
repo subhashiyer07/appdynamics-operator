@@ -186,7 +186,7 @@ type InstrumentationRule struct {
 	ContainerNameMatchString string            `json:"containerMatchString,omitempty"`
 	CustomAgentConfig        string            `json:"customAgentConfig,omitempty"`
 	EnvToUse                 string            `json:"env,omitempty"`
-	ImageInfo                ImageInfo         `json:"image-info,omitempty"`
+	ImageInfo                ImageInfo         `json:"imageInfo,omitempty"`
 }
 
 func init() {

@@ -497,10 +497,10 @@ instrument-container: %s
 container-match-string: %s
 netviz-info: %v
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
-		createLabelMapString(clusterAgent.Spec.DefaultLabelMatch), createImageInfoString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
+		mapToJsonString(clusterAgent.Spec.DefaultLabelMatch), imageInfoMapToJsonString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.InstrumentContainer,
-		clusterAgent.Spec.DefaultContainerMatchString, createNetvizInfoString(clusterAgent.Spec.NetvizInfo), createInstrumentationRulesString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -1007,7 +1007,7 @@ func createPodFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) strin
 	return strings.TrimRight(podFilterString.String(), ",") + "}"
 }
 
-func createNetvizInfoString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
+func netvizInfoToJsonString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
 	netvizInfoMap := map[string]interface{}{
 		"bci-enabled": netvizInfo.BciEnabled,
 		"port":        netvizInfo.Port,
@@ -1020,14 +1020,14 @@ func createNetvizInfoString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
 	return string(json)
 }
 
-func createImageInfoString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo) string {
+func imageInfoMapToJsonString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo) string {
 	imageInfoMap := make(map[string]map[string]string)
 	for language, info := range imageInfo {
 		imageInfo := map[string]string{
 			"image":            info.Image,
 			"agent-mount-path": info.AgentMountPath,
 		}
-		imageInfoMap[strings.ToLower(language)] = imageInfo
+		imageInfoMap[language] = imageInfo
 	}
 	json, err := json.Marshal(imageInfoMap)
 	if err != nil {
@@ -1037,16 +1037,23 @@ func createImageInfoString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo) s
 	return string(json)
 }
 
-func createLabelMapString(labelMap map[string]string) string {
-	json, err := json.Marshal(labelMap)
+func imageInfoToJsonString(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
+	return map[string]string{
+		"image":            imageInfo.Image,
+		"agent-mount-path": imageInfo.AgentMountPath,
+	}
+}
+
+func mapToJsonString(mapToConvert map[string]string) string {
+	json, err := json.Marshal(mapToConvert)
 	if err != nil {
-		fmt.Printf("Failed to marshal label info %v, %v", labelMap, err)
+		fmt.Printf("Failed to marshal label info %v, %v", mapToConvert, err)
 		return ""
 	}
 	return string(json)
 }
 
-func createInstrumentationRulesString(rules []appdynamicsv1alpha1.InstrumentationRule) string {
+func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.InstrumentationRule) string {
 	rulesOut := make([]map[string]interface{}, 0)
 	for _, rule := range rules {
 		ruleMap := map[string]interface{}{
@@ -1060,7 +1067,7 @@ func createInstrumentationRulesString(rules []appdynamicsv1alpha1.Instrumentatio
 			"container-match-string": rule.ContainerNameMatchString,
 			"custom-agent-config":    rule.CustomAgentConfig,
 			"env":                    rule.EnvToUse,
-			"image-info":             rule.ImageInfo,
+			"image-info":             imageInfoToJsonString(rule.ImageInfo),
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}
