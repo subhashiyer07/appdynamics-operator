@@ -1037,7 +1037,7 @@ func imageInfoMapToJsonString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo
 	return string(json)
 }
 
-func imageInfoToJsonString(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
+func imageInfoToMap(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
 	return map[string]string{
 		"image":            imageInfo.Image,
 		"agent-mount-path": imageInfo.AgentMountPath,
@@ -1067,7 +1067,7 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 			"container-match-string": rule.ContainerNameMatchString,
 			"custom-agent-config":    rule.CustomAgentConfig,
 			"env":                    rule.EnvToUse,
-			"image-info":             imageInfoToJsonString(rule.ImageInfo),
+			"image-info":             imageInfoToMap(rule.ImageInfo),
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}
