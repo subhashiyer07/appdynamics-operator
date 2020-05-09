@@ -609,6 +609,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 	fmt.Printf("Building deployment spec for image %s\n", clusterAgent.Spec.Image)
 	ls := labelsForClusteragent(clusterAgent)
 	var replicas int32 = 1
+	var optional = true
 	dep := &appsv1.Deployment{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "apps/v1",
@@ -641,6 +642,16 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 									SecretKeyRef: &corev1.SecretKeySelector{
 										LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
 										Key:                  "controller-key",
+									},
+								},
+							},
+							{
+								Name: "APPDYNAMICS_USER_CREDENTIALS",
+								ValueFrom: &corev1.EnvVarSource{
+									SecretKeyRef: &corev1.SecretKeySelector{
+										LocalObjectReference: corev1.LocalObjectReference{Name: secretName},
+										Key:                  "api-user",
+										Optional:             &optional,
 									},
 								},
 							},
@@ -1023,11 +1034,7 @@ func netvizInfoToJsonString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
 func imageInfoMapToJsonString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo) string {
 	imageInfoMap := make(map[string]map[string]string)
 	for language, info := range imageInfo {
-		imageInfo := map[string]string{
-			"image":            info.Image,
-			"agent-mount-path": info.AgentMountPath,
-		}
-		imageInfoMap[language] = imageInfo
+		imageInfoMap[language] = imageInfoToMap(info)
 	}
 	json, err := json.Marshal(imageInfoMap)
 	if err != nil {
