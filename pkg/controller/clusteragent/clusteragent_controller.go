@@ -496,11 +496,14 @@ default-app-name: %s
 instrument-container: %s
 container-match-string: %s
 netviz-info: %v
+run-as-user: %d
+run-as-group: %d
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
 		mapToJsonString(clusterAgent.Spec.DefaultLabelMatch), imageInfoMapToJsonString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.InstrumentContainer,
-		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), clusterAgent.Spec.RunAsUser, clusterAgent.Spec.RunAsGroup,
+		instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
