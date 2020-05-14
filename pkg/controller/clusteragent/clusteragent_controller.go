@@ -834,12 +834,27 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 		clusterAgent.Spec.DefaultLabelMatch = make(map[string]string)
 	}
 
+	defaultImageInfoMap := map[string]appdynamicsv1alpha1.ImageInfo{
+		JAVA_LANGUAGE: {
+			Image:          AppDJavaAttachImage,
+			AgentMountPath: AGENT_MOUNT_PATH,
+		},
+	}
 	if clusterAgent.Spec.ImageInfoMap == nil {
-		clusterAgent.Spec.ImageInfoMap = map[string]appdynamicsv1alpha1.ImageInfo{
-			JAVA_LANGUAGE: {
-				Image:          AppDJavaAttachImage,
-				AgentMountPath: AGENT_MOUNT_PATH,
-			},
+		clusterAgent.Spec.ImageInfoMap = defaultImageInfoMap
+	} else {
+		//Handle only java for now
+		javaImageInfo, exists := clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE]
+		if exists {
+			if javaImageInfo.Image == "" {
+				javaImageInfo.Image = AppDJavaAttachImage
+			}
+			if javaImageInfo.AgentMountPath == "" {
+				javaImageInfo.AgentMountPath = AGENT_MOUNT_PATH
+			}
+			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = javaImageInfo
+		} else {
+			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = defaultImageInfoMap[JAVA_LANGUAGE]
 		}
 	}
 
@@ -885,6 +900,13 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 		if clusterAgent.Spec.InstrumentationRules[i].ImageInfo == (appdynamicsv1alpha1.ImageInfo{}) {
 			clusterAgent.Spec.InstrumentationRules[i].ImageInfo = clusterAgent.Spec.ImageInfoMap[clusterAgent.Spec.InstrumentationRules[i].Language]
+		} else {
+			if clusterAgent.Spec.InstrumentationRules[i].ImageInfo.Image == "" {
+				clusterAgent.Spec.InstrumentationRules[i].ImageInfo.Image = AppDJavaAttachImage
+			}
+			if clusterAgent.Spec.InstrumentationRules[i].ImageInfo.AgentMountPath == "" {
+				clusterAgent.Spec.InstrumentationRules[i].ImageInfo.AgentMountPath = AGENT_MOUNT_PATH
+			}
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].InstrumentContainer == "" {
