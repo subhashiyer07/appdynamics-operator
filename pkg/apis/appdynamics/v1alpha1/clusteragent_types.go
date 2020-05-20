@@ -58,7 +58,7 @@ type ClusteragentSpec struct {
 	InstrumentMatchString        []string              `json:"instrumentMatchString,omitempty"`
 	DefaultInstrumentMatchString string                `json:"defaultInstrumentMatchString,omitempty"`
 	DefaultInstrumentationTech   string                `json:"defaultInstrumentationTech,omitempty"`
-	DefaultLabelMatch            map[string]string     `json:"defaultInstrumentionLabelMatch,omitempty"`
+	DefaultLabelMatch            []map[string]string   `json:"defaultInstrumentationLabelMatch,omitempty"`
 	NsToInstrument               []string              `json:"nsToInstrument,omitempty"`
 	NsToInstrumentRegex          string                `json:"nsToInstrumentRegex,omitempty"`
 	NsToInstrumentExclude        []string              `json:"nsToInstrumentExclude,omitempty"`
@@ -108,7 +108,7 @@ type ClusteragentSpec struct {
 	AgentSSLStoreName            string                `json:"agentSSLStoreName,omitempty"`
 	AgentSSLPassword             string                `json:"agentSSLPassword,omitempty"`
 	PodFilter                    ClusteragentPodFilter `json:"podFilter,omitempty"`
-	ImageInfoMap                 map[string]ImageInfo  `json:"image-info,omitempty"`
+	ImageInfoMap                 map[string]ImageInfo  `json:"imageInfo,omitempty"`
 
 	//snapshot schemas
 	PodSchemaName       string `json:"podSchemaName,omitempty"`
@@ -176,17 +176,17 @@ type ClusteragentList struct {
 }
 
 type InstrumentationRule struct {
-	NamespaceRegex           string            `json:"namespaceRegex,omitempty"`
-	MatchString              string            `json:"matchString,omitempty"`
-	LabelMatch               map[string]string `json:"labelMatch,omitempty"`
-	AppName                  string            `json:"appName,omitempty"`
-	TierName                 string            `json:"tierName,omitempty"`
-	Language                 string            `json:"language,omitempty"`
-	InstrumentContainer      string            `json:"instrumentContainer,omitempty"`
-	ContainerNameMatchString string            `json:"containerMatchString,omitempty"`
-	CustomAgentConfig        string            `json:"customAgentConfig,omitempty"`
-	EnvToUse                 string            `json:"env,omitempty"`
-	ImageInfo                ImageInfo         `json:"imageInfo,omitempty"`
+	NamespaceRegex           string              `json:"namespaceRegex,omitempty"`
+	MatchString              string              `json:"matchString,omitempty"`
+	LabelMatch               []map[string]string `json:"labelMatch,omitempty"`
+	AppName                  string              `json:"appName,omitempty"`
+	TierName                 string              `json:"tierName,omitempty"`
+	Language                 string              `json:"language,omitempty"`
+	InstrumentContainer      string              `json:"instrumentContainer,omitempty"`
+	ContainerNameMatchString string              `json:"containerMatchString,omitempty"`
+	CustomAgentConfig        string              `json:"customAgentConfig,omitempty"`
+	EnvToUse                 string              `json:"env,omitempty"`
+	ImageInfo                ImageInfo           `json:"imageInfo,omitempty"`
 }
 
 func init() {

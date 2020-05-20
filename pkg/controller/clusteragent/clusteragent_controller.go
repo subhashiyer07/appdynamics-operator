@@ -496,11 +496,14 @@ default-app-name: %s
 instrument-container: %s
 container-match-string: %s
 netviz-info: %v
+run-as-user: %d
+run-as-group: %d
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
 		mapToJsonString(clusterAgent.Spec.DefaultLabelMatch), imageInfoMapToJsonString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.InstrumentContainer,
-		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), clusterAgent.Spec.RunAsUser, clusterAgent.Spec.RunAsGroup,
+		instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -828,15 +831,30 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 	}
 
 	if clusterAgent.Spec.DefaultLabelMatch == nil {
-		clusterAgent.Spec.DefaultLabelMatch = make(map[string]string)
+		clusterAgent.Spec.DefaultLabelMatch = make([]map[string]string, 0)
 	}
 
+	defaultImageInfoMap := map[string]appdynamicsv1alpha1.ImageInfo{
+		JAVA_LANGUAGE: {
+			Image:          AppDJavaAttachImage,
+			AgentMountPath: AGENT_MOUNT_PATH,
+		},
+	}
 	if clusterAgent.Spec.ImageInfoMap == nil {
-		clusterAgent.Spec.ImageInfoMap = map[string]appdynamicsv1alpha1.ImageInfo{
-			JAVA_LANGUAGE: {
-				Image:          AppDJavaAttachImage,
-				AgentMountPath: AGENT_MOUNT_PATH,
-			},
+		clusterAgent.Spec.ImageInfoMap = defaultImageInfoMap
+	} else {
+		//Handle only java for now
+		javaImageInfo, exists := clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE]
+		if exists {
+			if javaImageInfo.Image == "" {
+				javaImageInfo.Image = AppDJavaAttachImage
+			}
+			if javaImageInfo.AgentMountPath == "" {
+				javaImageInfo.AgentMountPath = AGENT_MOUNT_PATH
+			}
+			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = javaImageInfo
+		} else {
+			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = defaultImageInfoMap[JAVA_LANGUAGE]
 		}
 	}
 
@@ -873,7 +891,7 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].LabelMatch == nil {
-			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = make(map[string]string)
+			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = make([]map[string]string, 0)
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].Language == "" {
@@ -882,6 +900,13 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 		if clusterAgent.Spec.InstrumentationRules[i].ImageInfo == (appdynamicsv1alpha1.ImageInfo{}) {
 			clusterAgent.Spec.InstrumentationRules[i].ImageInfo = clusterAgent.Spec.ImageInfoMap[clusterAgent.Spec.InstrumentationRules[i].Language]
+		} else {
+			if clusterAgent.Spec.InstrumentationRules[i].ImageInfo.Image == "" {
+				clusterAgent.Spec.InstrumentationRules[i].ImageInfo.Image = AppDJavaAttachImage
+			}
+			if clusterAgent.Spec.InstrumentationRules[i].ImageInfo.AgentMountPath == "" {
+				clusterAgent.Spec.InstrumentationRules[i].ImageInfo.AgentMountPath = AGENT_MOUNT_PATH
+			}
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].InstrumentContainer == "" {
@@ -1051,13 +1076,24 @@ func imageInfoToMap(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
 	}
 }
 
-func mapToJsonString(mapToConvert map[string]string) string {
-	json, err := json.Marshal(mapToConvert)
+func mapToJsonString(mapToConvert []map[string]string) string {
+	valueToConvert := convertToMapOfArray(mapToConvert)
+	json, err := json.Marshal(valueToConvert)
 	if err != nil {
-		fmt.Printf("Failed to marshal label info %v, %v", mapToConvert, err)
+		fmt.Printf("Failed to marshal label info %v, %v", valueToConvert, err)
 		return ""
 	}
 	return string(json)
+}
+
+func convertToMapOfArray(m []map[string]string) map[string][]string {
+	result := make(map[string][]string)
+	for _, label := range m {
+		for key, val := range label {
+			result[key] = append(result[key], val)
+		}
+	}
+	return result
 }
 
 func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.InstrumentationRule) string {
@@ -1066,7 +1102,7 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 		ruleMap := map[string]interface{}{
 			"namespaces":             rule.NamespaceRegex,
 			"match-string":           rule.MatchString,
-			"label-match":            rule.LabelMatch,
+			"label-match":            convertToMapOfArray(rule.LabelMatch),
 			"app-name":               rule.AppName,
 			"tier-name":              rule.TierName,
 			"language":               rule.Language,

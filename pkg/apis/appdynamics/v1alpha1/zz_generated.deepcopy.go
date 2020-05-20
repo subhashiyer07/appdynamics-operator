@@ -447,9 +447,15 @@ func (in *ClusteragentSpec) DeepCopyInto(out *ClusteragentSpec) {
 	}
 	if in.DefaultLabelMatch != nil {
 		in, out := &in.DefaultLabelMatch, &out.DefaultLabelMatch
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
+		*out = make([]map[string]string, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = make(map[string]string, len(*in))
+				for key, val := range *in {
+					(*out)[key] = val
+				}
+			}
 		}
 	}
 	if in.NsToInstrument != nil {
@@ -690,9 +696,15 @@ func (in *InstrumentationRule) DeepCopyInto(out *InstrumentationRule) {
 	*out = *in
 	if in.LabelMatch != nil {
 		in, out := &in.LabelMatch, &out.LabelMatch
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
+		*out = make([]map[string]string, len(*in))
+		for i := range *in {
+			if (*in)[i] != nil {
+				in, out := &(*in)[i], &(*out)[i]
+				*out = make(map[string]string, len(*in))
+				for key, val := range *in {
+					(*out)[key] = val
+				}
+			}
 		}
 	}
 	out.ImageInfo = in.ImageInfo
