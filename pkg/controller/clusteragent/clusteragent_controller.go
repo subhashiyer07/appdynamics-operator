@@ -831,7 +831,7 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 	}
 
 	if clusterAgent.Spec.DefaultLabelMatch == nil {
-		clusterAgent.Spec.DefaultLabelMatch = make(map[string]string)
+		clusterAgent.Spec.DefaultLabelMatch = make([]map[string]string, 0)
 	}
 
 	defaultImageInfoMap := map[string]appdynamicsv1alpha1.ImageInfo{
@@ -891,7 +891,7 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].LabelMatch == nil {
-			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = make(map[string]string)
+			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = make([]map[string]string, 0)
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].Language == "" {
@@ -1076,13 +1076,24 @@ func imageInfoToMap(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
 	}
 }
 
-func mapToJsonString(mapToConvert map[string]string) string {
-	json, err := json.Marshal(mapToConvert)
+func mapToJsonString(mapToConvert []map[string]string) string {
+	valueToConvert := convertToMapOfArray(mapToConvert)
+	json, err := json.Marshal(valueToConvert)
 	if err != nil {
-		fmt.Printf("Failed to marshal label info %v, %v", mapToConvert, err)
+		fmt.Printf("Failed to marshal label info %v, %v", valueToConvert, err)
 		return ""
 	}
 	return string(json)
+}
+
+func convertToMapOfArray(m []map[string]string) map[string][]string {
+	result := make(map[string][]string)
+	for _, label := range m {
+		for key, val := range label {
+			result[key] = append(result[key], val)
+		}
+	}
+	return result
 }
 
 func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.InstrumentationRule) string {
@@ -1091,7 +1102,7 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 		ruleMap := map[string]interface{}{
 			"namespaces":             rule.NamespaceRegex,
 			"match-string":           rule.MatchString,
-			"label-match":            rule.LabelMatch,
+			"label-match":            convertToMapOfArray(rule.LabelMatch),
 			"app-name":               rule.AppName,
 			"tier-name":              rule.TierName,
 			"language":               rule.Language,
