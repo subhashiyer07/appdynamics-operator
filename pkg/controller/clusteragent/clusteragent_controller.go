@@ -924,6 +924,18 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 		if clusterAgent.Spec.InstrumentationRules[i].CustomAgentConfig == "" {
 			clusterAgent.Spec.InstrumentationRules[i].CustomAgentConfig = clusterAgent.Spec.DefaultCustomConfig
 		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].NetvizInfo == (appdynamicsv1alpha1.NetvizInfo{}) {
+			clusterAgent.Spec.InstrumentationRules[i].NetvizInfo = clusterAgent.Spec.NetvizInfo
+		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].RunAsUser == 0 {
+			clusterAgent.Spec.InstrumentationRules[i].RunAsUser = clusterAgent.Spec.RunAsUser
+		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].RunAsGroup == 0 {
+			clusterAgent.Spec.InstrumentationRules[i].RunAsGroup = clusterAgent.Spec.RunAsGroup
+		}
 	}
 }
 
@@ -1043,11 +1055,15 @@ func createPodFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) strin
 	return strings.TrimRight(podFilterString.String(), ",") + "}"
 }
 
-func netvizInfoToJsonString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
-	netvizInfoMap := map[string]interface{}{
+func netvizInfoToMap(netvizInfo appdynamicsv1alpha1.NetvizInfo) map[string]interface{} {
+	return map[string]interface{}{
 		"bci-enabled": netvizInfo.BciEnabled,
 		"port":        netvizInfo.Port,
 	}
+}
+
+func netvizInfoToJsonString(netvizInfo appdynamicsv1alpha1.NetvizInfo) string {
+	netvizInfoMap := netvizInfoToMap(netvizInfo)
 	json, err := json.Marshal(netvizInfoMap)
 	if err != nil {
 		fmt.Printf("Failed to marshal netviz info %v, %v", netvizInfoMap, err)
@@ -1111,6 +1127,9 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 			"custom-agent-config":    rule.CustomAgentConfig,
 			"env":                    rule.EnvToUse,
 			"image-info":             imageInfoToMap(rule.ImageInfo),
+			"netviz-info":            netvizInfoToMap(rule.NetvizInfo),
+			"run-as-user":            rule.RunAsUser,
+			"run-as-group":           rule.RunAsGroup,
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}
