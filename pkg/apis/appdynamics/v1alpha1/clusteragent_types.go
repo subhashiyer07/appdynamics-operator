@@ -187,6 +187,9 @@ type InstrumentationRule struct {
 	CustomAgentConfig        string              `json:"customAgentConfig,omitempty"`
 	EnvToUse                 string              `json:"env,omitempty"`
 	ImageInfo                ImageInfo           `json:"imageInfo,omitempty"`
+	NetvizInfo               NetvizInfo          `json:"netvizInfo,omitempty"`
+	RunAsUser                int64               `json:"runAsUser,omitempty"`
+	RunAsGroup               int64               `json:"runAsGroup,omitempty"`
 }
 
 func init() {

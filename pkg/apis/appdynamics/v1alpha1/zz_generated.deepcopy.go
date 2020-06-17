@@ -708,6 +708,7 @@ func (in *InstrumentationRule) DeepCopyInto(out *InstrumentationRule) {
 		}
 	}
 	out.ImageInfo = in.ImageInfo
+	out.NetvizInfo = in.NetvizInfo
 	return
 }
 
