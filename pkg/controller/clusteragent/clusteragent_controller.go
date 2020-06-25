@@ -43,14 +43,15 @@ const (
 	WHITELISTED                 string = "whitelisted"
 	BLACKLISTED                 string = "blacklisted"
 
-	ENV_INSTRUMENTATION string = "Env"
-	NO_INSTRUMENTATION         = "None"
-	JAVA_LANGUAGE       string = "java"
-	AppDJavaAttachImage        = "docker.io/appdynamics/java-agent:latest"
-	AGENT_MOUNT_PATH           = "/opt/appdynamics"
-	Deployment                 = "Deployment"
-	JAVA_TOOL_OPTIONS          = "JAVA_TOOL_OPTIONS"
-	FIRST                      = "first"
+	ENV_INSTRUMENTATION     string = "Env"
+	NO_INSTRUMENTATION             = "None"
+	JAVA_LANGUAGE           string = "java"
+	AppDJavaAttachImage            = "docker.io/appdynamics/java-agent:latest"
+	AGENT_MOUNT_PATH               = "/opt/appdynamics"
+	Deployment                     = "Deployment"
+	JAVA_TOOL_OPTIONS              = "JAVA_TOOL_OPTIONS"
+	FIRST                          = "first"
+	MANUAL_APPNAME_STRATEGY        = "manual"
 )
 
 // Add creates a new Clusteragent Controller and adds it to the Manager. The Manager will set fields on the Controller
@@ -493,17 +494,19 @@ resources-to-instrument: %s
 default-env: %s
 default-custom-agent-config: %s
 default-app-name: %s
+app-name-label: %s
 instrument-container: %s
 container-match-string: %s
 netviz-info: %v
 run-as-user: %d
 run-as-group: %d
+app-name-strategy: %s
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
 		mapToJsonString(clusterAgent.Spec.DefaultLabelMatch), imageInfoMapToJsonString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
-		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.InstrumentContainer,
+		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.AppNameLabel, clusterAgent.Spec.InstrumentContainer,
 		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), clusterAgent.Spec.RunAsUser, clusterAgent.Spec.RunAsGroup,
-		instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.AppNameStrategy, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -881,10 +884,15 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 		}
 	}
 
+	if clusterAgent.Spec.AppNameStrategy == "" {
+		clusterAgent.Spec.AppNameStrategy = MANUAL_APPNAME_STRATEGY
+	}
+
 	setInstrumentationRuleDefault(clusterAgent)
 }
 
 func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragent) {
+	// Note: We do not set any default to appname. It will be determined at runtime
 	for i := range clusterAgent.Spec.InstrumentationRules {
 		if clusterAgent.Spec.InstrumentationRules[i].EnvToUse == "" {
 			clusterAgent.Spec.InstrumentationRules[i].EnvToUse = clusterAgent.Spec.DefaultEnv
@@ -915,10 +923,6 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 		if clusterAgent.Spec.InstrumentationRules[i].ContainerNameMatchString == "" {
 			clusterAgent.Spec.InstrumentationRules[i].ContainerNameMatchString = clusterAgent.Spec.DefaultContainerMatchString
-		}
-
-		if clusterAgent.Spec.InstrumentationRules[i].AppName == "" {
-			clusterAgent.Spec.InstrumentationRules[i].AppName = clusterAgent.Spec.DefaultAppName
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].CustomAgentConfig == "" {
@@ -1130,6 +1134,7 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 			"netviz-info":            netvizInfoToMap(rule.NetvizInfo),
 			"run-as-user":            rule.RunAsUser,
 			"run-as-group":           rule.RunAsGroup,
+			"app-name-label":         rule.AppNameLabel,
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}

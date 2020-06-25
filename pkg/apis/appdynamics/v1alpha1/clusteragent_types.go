@@ -70,6 +70,8 @@ type ClusteragentSpec struct {
 	DefaultAppName               string                `json:"defaultAppName,omitempty"`
 	DefaultContainerMatchString  string                `json:"defaultContainerMatchString,omitempty"`
 	NetvizInfo                   NetvizInfo            `json:"netvizInfo,omitempty"`
+	AppNameStrategy              string                `json:"appNameStrategy,omitempty"`
+	AppNameLabel                 string                `json:"appNameLabel,omitempty"`
 	InstrumentationRules         []InstrumentationRule `json:"instrumentationRules,omitempty"`
 	NodesToMonitor               []string              `json:"nodesToMonitor,omitempty"`
 	NodesToMonitorExclude        []string              `json:"nodesToMonitorExclude,omitempty"`
@@ -180,6 +182,7 @@ type InstrumentationRule struct {
 	MatchString              string              `json:"matchString,omitempty"`
 	LabelMatch               []map[string]string `json:"labelMatch,omitempty"`
 	AppName                  string              `json:"appName,omitempty"`
+	AppNameLabel             string              `json:"appNameLabel,omitempty"`
 	TierName                 string              `json:"tierName,omitempty"`
 	Language                 string              `json:"language,omitempty"`
 	InstrumentContainer      string              `json:"instrumentContainer,omitempty"`
