@@ -669,6 +669,14 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 									},
 								},
 							},
+							{
+								Name: "NODE_NAME",
+								ValueFrom: &corev1.EnvVarSource{
+									FieldRef: &corev1.ObjectFieldSelector{
+										FieldPath: "spec.nodeName",
+									},
+								},
+							},
 						},
 						Image:           clusterAgent.Spec.Image,
 						ImagePullPolicy: corev1.PullAlways,
