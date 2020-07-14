@@ -84,6 +84,7 @@ rules:
   - apiGroups:
       - ""
     resources:
+      - pods
       - services
       - configmaps
       - secrets

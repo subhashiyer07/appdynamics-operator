@@ -14,6 +14,7 @@ type InfraVizSpec struct {
 	ControllerUrl         string                      `json:"controllerUrl"`
 	Account               string                      `json:"account,omitempty"`
 	Image                 string                      `json:"image,omitempty"`
+	ImageWin              string                      `json:"imageWin,omitempty"`
 	AccessSecret          string                      `json:"accessSecret,omitempty"`
 	GlobalAccount         string                      `json:"globalAccount,omitempty"`
 	EventServiceUrl       string                      `json:"eventServiceUrl,omitempty"`
@@ -26,6 +27,7 @@ type InfraVizSpec struct {
 	ProxyUrl              string                      `json:"proxyUrl,omitempty"`
 	ProxyUser             string                      `json:"proxyUser,omitempty"`
 	LogLevel              string                      `json:"logLevel,omitempty"`
+	SyslogPort            int32                       `json:"syslogPort,omitempty"`
 	Pks                   bool                        `json:"pks,omitempty"`
 	NetVizPort            int32                       `json:"netVizPort,omitempty"`
 	NetVizImage           string                      `json:"netVizImage,omitempty"`
@@ -39,8 +41,10 @@ type InfraVizSpec struct {
 	Tolerations           []corev1.Toleration         `json:"tolerations,omitempty"`
 	Args                  []string                    `json:"args,omitempty"`
 	Env                   []corev1.EnvVar             `json:"env,omitempty"`
+	Ports                 []corev1.ContainerPort      `json:"ports,omitempty"`
 	Resources             corev1.ResourceRequirements `json:"resources,omitempty"`
 	PriorityClassName     string                      `json:"priorityClassName,omitempty"`
+	NodeOS                string                      `json:"nodeOS,omitempty"`
 }
 
 // InfraVizStatus defines the observed state of InfraViz

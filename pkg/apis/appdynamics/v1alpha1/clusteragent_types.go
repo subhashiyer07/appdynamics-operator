@@ -22,6 +22,7 @@ type ClusteragentSpec struct {
 	Args               []string                    `json:"args,omitempty"`
 	Env                []corev1.EnvVar             `json:"env,omitempty"`
 	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
+	NodeSelector       map[string]string           `json:"nodeSelector,omitempty"`
 	AppName            string                      `json:"appName,omitempty"`
 	AgentServerPort    int32                       `json:"agentServerPort,omitempty"`
 	SystemSSLCert      string                      `json:"systemSSLCert,omitempty"`
