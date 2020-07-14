@@ -217,7 +217,7 @@ oc apply -f deploy/infraviz-openshift.yaml
 ```
 
 ### Mixed OS Clusters
-As of v 0.5.0, the operator can deploy Machine Agent daemonsets to both Linux and Windows nodes. The deployment startegy in mixed OS clusters is determined by the value of the `nodeOS` property. This property has the following values:
+As of v 0.5.0, the operator can deploy Machine Agent daemonsets to both Linux and Windows nodes. The deployment strategy in mixed OS clusters is determined by the value of the `nodeOS` property. This property has the following values:
 
 * linux
 * windows
@@ -233,7 +233,7 @@ To deploy the Machine Agent to both OSs you have several options:
 The choice of the strategy depends on your customization needs. The first strategy is convenient when both Linux and Windows daemonsets share all Infraviz properties (resources, ports, etc). 
 If Linux and Windows daemonsets need to be customized independently, the secod strategy is more practical.
 
-In both secanrios the placement is driven by the `nodeSelector` value. The operator will generate a nodeSelector, if not specified by the user, and set the value of `"kubernetes.io/os"` to `linux` or `windows` depending on the value of the `nodeOS` property. You can provide additional nodeSelector values as necessary using the `nodeSelector` property of the Infraviz spec.
+In both scenarios the placement is driven by the `nodeSelector` value. The operator will generate a nodeSelector, if not specified by the user, and set the value of `"kubernetes.io/os"` to `linux` or `windows` depending on the value of the `nodeOS` property. You can provide additional nodeSelector values as necessary using the `nodeSelector` property of the Infraviz spec.
 
 If `nodeOS` is not set, the operator will attempt to deploy the daemonset to all available worker nodes in the cluster, regardless of the OS. If you have a mixed OS cluster, you will need to set the `nodeSelector` property to `kubernetes.io/os: linux` or a similar depending on the labels used on the cluster nodes.
 The `enableMasters` directive will be honored in all cases except when `nodeOS` property is set to `windows`. 
