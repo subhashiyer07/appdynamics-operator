@@ -258,8 +258,8 @@ Updates to the infraViz with different `nodeOS` values is transparent. For examp
 | `stdoutLogging` | Determines if the logs are saved to a file or redirected to the console | "false" |
 | `syslogPort` | The embedded analytics agent uses this host port to ingest syslog messages. The port is not set by default. When required, the recommended value is 5144 or based on the port availability on the host | Optional |
 | `netVizPort` | When > 0, the network visibility agent will be deployed in a sidecar along with the machine agent. By default the network visibility agent works with port `3892` | Not set by default |
-| `proxyUrl` | Url of the proxy server (protocol://domain:port") | Optional |
 | `netVizImage` | Reference of the Network Agent image | "appdynamics/machine-agent-netviz:latest"
+| `proxyUrl` | Url of the proxy server (protocol://domain:port") | Optional |
 | `proxyUser` | Proxy user credentials (user@password) | Optional |
 | `propertyBag` | A string with any other machine agent parameters | Optional
 | `pks` | PKS deployment flag. Must be used on PKS environments|  Optional |
