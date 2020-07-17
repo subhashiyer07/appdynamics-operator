@@ -53,6 +53,7 @@ type ClusteragentSpec struct {
 	MetricUploadRetryCount                int    `json:"metricUploadRetryCount,omitempty"`
 	MetricUploadRetryIntervalMilliSeconds int    `json:"metricUploadRetryIntervalMilliSeconds,omitempty"`
 	MaxPodsToRegisterCount                int    `json:"maxPodsToRegisterCount,omitempty"`
+	MaxPodLogsTailLinesCount              int    `json:"maxPodLogsTailLinesCount,omitempty"`
 
 	//instrumentation
 	InstrumentationMethod        string                `json:"instrumentationMethod,omitempty"`

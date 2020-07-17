@@ -446,10 +446,11 @@ pod-registration-batch-size: %d
 metric-upload-retry-count: %d
 metric-upload-retry-interval-milliseconds: %d
 max-pods-to-register-count: %d
+max-pod-logs-tail-lines-count: %d
 pod-filter: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.PodBatchSize,
 		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
-		clusterAgent.Spec.MaxPodsToRegisterCount,
+		clusterAgent.Spec.MaxPodsToRegisterCount, clusterAgent.Spec.MaxPodLogsTailLinesCount,
 		createPodFilterString(clusterAgent))
 
 	cm := &corev1.ConfigMap{}
@@ -1001,6 +1002,10 @@ func setClusterAgentConfigDefaults(clusterAgent *appdynamicsv1alpha1.Clusteragen
 
 	if clusterAgent.Spec.MaxPodsToRegisterCount == 0 {
 		clusterAgent.Spec.MaxPodsToRegisterCount = 750
+	}
+
+	if clusterAgent.Spec.MaxPodLogsTailLinesCount == 0 {
+		clusterAgent.Spec.MaxPodLogsTailLinesCount = 500
 	}
 
 	// logger defaults
