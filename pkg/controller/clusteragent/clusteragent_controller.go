@@ -638,6 +638,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 				Spec: corev1.PodSpec{
 					NodeSelector:       clusterAgent.Spec.NodeSelector,
 					ServiceAccountName: clusterAgent.Spec.ServiceAccountName,
+					Tolerations:        clusterAgent.Spec.Tolerations,
 					Containers: []corev1.Container{{
 						EnvFrom: []corev1.EnvFromSource{{
 							ConfigMapRef: &corev1.ConfigMapEnvSource{
