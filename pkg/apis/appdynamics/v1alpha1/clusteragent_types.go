@@ -55,6 +55,8 @@ type ClusteragentSpec struct {
 	MaxPodsToRegisterCount                int    `json:"maxPodsToRegisterCount,omitempty"`
 	MaxPodLogsTailLinesCount              int    `json:"maxPodLogsTailLinesCount,omitempty"`
 
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
+
 	//instrumentation
 	InstrumentationMethod        string                `json:"instrumentationMethod,omitempty"`
 	InstrumentMatchString        []string              `json:"instrumentMatchString,omitempty"`
