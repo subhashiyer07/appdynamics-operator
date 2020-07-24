@@ -43,6 +43,8 @@ const (
 	OS_LINUX                  string = "linux"
 	OS_WINDOWS                string = "windows"
 	OS_ALL                    string = "all"
+	UNIQUE_ID_FROM_HOST_IP    string = "status.hostIP"
+	UNIQUE_ID_FROM_HOST_NAME  string = "spec.nodeName"
 
 //	SYSLOG_PORT               int32  = 5144
 )
@@ -686,11 +688,23 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 	}
 
 	if infraViz.Spec.UniqueHostId == "" {
+		infraViz.Spec.UniqueHostId = UNIQUE_ID_FROM_HOST_NAME
+		if infraViz.Spec.Pks {
+			infraViz.Spec.UniqueHostId = UNIQUE_ID_FROM_HOST_IP
+		}
+	} else {
+		if infraViz.Spec.UniqueHostId != UNIQUE_ID_FROM_HOST_NAME &&
+			infraViz.Spec.UniqueHostId != UNIQUE_ID_FROM_HOST_IP {
+			infraViz.Spec.UniqueHostId = ""
+		}
+	}
+
+	if infraViz.Spec.UniqueHostId != "" {
 		uniqueHostId := corev1.EnvVar{
 			Name: "APPDYNAMICS_AGENT_UNIQUE_HOST_ID",
 			ValueFrom: &corev1.EnvVarSource{
 				FieldRef: &corev1.ObjectFieldSelector{
-					FieldPath: "spec.nodeName",
+					FieldPath: infraViz.Spec.UniqueHostId,
 				},
 			},
 		}
@@ -746,29 +760,57 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 	}
 
 	if isWindows == false {
-		podSpec.Containers[0].VolumeMounts = []corev1.VolumeMount{{
-			Name:      "hostroot",
-			MountPath: "/hostroot",
-			ReadOnly:  true,
-		}, {
-			Name:      "ma-log-volume",
-			MountPath: "/opt/appdynamics/conf/logging",
-			ReadOnly:  true,
-		}}
+		podSpec.Containers[0].VolumeMounts = []corev1.VolumeMount{
+			{
+				Name:      "proc",
+				MountPath: "/hostroot/proc",
+				ReadOnly:  true,
+			},
+			{
+				Name:      "etc",
+				MountPath: "/hostroot/etc",
+				ReadOnly:  true,
+			}, {
+				Name:      "sys",
+				MountPath: "/hostroot/sys",
+				ReadOnly:  true,
+			},
+			{
+				Name:      "ma-log-volume",
+				MountPath: "/opt/appdynamics/conf/logging",
+				ReadOnly:  true,
+			}}
 		podSpec.Containers[0].SecurityContext = &corev1.SecurityContext{
 			Privileged: &trueVar,
 		}
 		podSpec.HostNetwork = true
 		podSpec.HostPID = true
 		podSpec.HostIPC = true
-		podSpec.Volumes = []corev1.Volume{{
-			Name: "hostroot",
-			VolumeSource: corev1.VolumeSource{
-				HostPath: &corev1.HostPathVolumeSource{
-					Path: "/", Type: &dir,
+		podSpec.Volumes = []corev1.Volume{
+			{
+				Name: "proc",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: "/proc", Type: &dir,
+					},
 				},
 			},
-		},
+			{
+				Name: "etc",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: "/etc", Type: &dir,
+					},
+				},
+			},
+			{
+				Name: "sys",
+				VolumeSource: corev1.VolumeSource{
+					HostPath: &corev1.HostPathVolumeSource{
+						Path: "/sys", Type: &dir,
+					},
+				},
+			},
 			{
 				Name: "ma-log-volume",
 				VolumeSource: corev1.VolumeSource{
