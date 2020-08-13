@@ -759,6 +759,13 @@ func (r *ReconcileInfraViz) newPodSpecForCR(infraViz *appdynamicsv1alpha1.InfraV
 		Tolerations:        infraViz.Spec.Tolerations,
 	}
 
+	//image pull secret
+	if infraViz.Spec.ImagePullSecret != "" {
+		podSpec.ImagePullSecrets = []corev1.LocalObjectReference{
+			{Name: infraViz.Spec.ImagePullSecret},
+		}
+	}
+
 	if isWindows == false {
 		podSpec.Containers[0].VolumeMounts = []corev1.VolumeMount{
 			{

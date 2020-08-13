@@ -266,6 +266,7 @@ Updates to the infraViz with different `nodeOS` values is transparent. For examp
 | `enableMasters` | When set to **true** server visibility will be provided for Master nodes. By default only Worker nodes are monitored. On managed Kubernetes providers the flag has no effect, as the Master plane is not accessible | Optional
 | `image` | The Machine Agent image | "appdynamics/machine-agent-analytics:latest" |
 | `imageWin` | The Machine Agent image for Windows nodes | Required when `nodeOS` is set to `all` or `windows` |
+| `imagePullSecret` | Name of the image pull secret | Optional
 | `nodeSelector` | Labels that identify nodes for scheduling of the daemonset pods | Optional |
 | `tolerations` | A list of tolerations | Optional |
 | `env` | List of environment variables | Optional |

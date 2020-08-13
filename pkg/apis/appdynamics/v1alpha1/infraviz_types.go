@@ -44,6 +44,7 @@ type InfraVizSpec struct {
 	Ports                 []corev1.ContainerPort      `json:"ports,omitempty"`
 	Resources             corev1.ResourceRequirements `json:"resources,omitempty"`
 	PriorityClassName     string                      `json:"priorityClassName,omitempty"`
+	ImagePullSecret       string                      `json:"imagePullSecret,omitempty"`
 	NodeOS                string                      `json:"nodeOS,omitempty"`
 }
 
