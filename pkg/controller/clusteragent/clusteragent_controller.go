@@ -453,6 +453,15 @@ pod-filter: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.Cluste
 		clusterAgent.Spec.MaxPodsToRegisterCount, clusterAgent.Spec.MaxPodLogsTailLinesCount,
 		createPodFilterString(clusterAgent))
 
+	if clusterAgent.Spec.NsToMonitorRegex != "" {
+		yml = fmt.Sprintf(`%s
+ns-to-monitor-regex: %s`, yml, clusterAgent.Spec.NsToMonitorRegex)
+	}
+	if clusterAgent.Spec.NsToExcludeRegex != "" {
+		yml = fmt.Sprintf(`%s
+ns-to-exclude-regex: %s`, yml, clusterAgent.Spec.NsToExcludeRegex)
+	}
+
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_MON_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
 
