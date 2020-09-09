@@ -31,6 +31,8 @@ type ClusteragentSpec struct {
 	ProxyUrl           string                      `json:"proxyUrl,omitempty"`
 	ProxyUser          string                      `json:"proxyUser,omitempty"`
 	ProxyPass          string                      `json:"proxyPass,omitempty"`
+	NsToMonitorRegex   string                      `json:"nsToMonitorRegex,omitempty"`
+	NsToExcludeRegex   string                      `json:"nsToExcludeRegex,omitempty"`
 
 	//limits
 	EventAPILimit                         int    `json:"eventAPILimit,omitempty"`

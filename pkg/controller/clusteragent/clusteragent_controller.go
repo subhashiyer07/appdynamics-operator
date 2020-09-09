@@ -415,6 +415,7 @@ func (r *ReconcileClusteragent) ensureAgentConfig(clusterAgent *appdynamicsv1alp
 	cm.Data["APPDYNAMICS_AGENT_PROXY_URL"] = clusterAgent.Spec.ProxyUrl
 	cm.Data["APPDYNAMICS_AGENT_PROXY_USER"] = clusterAgent.Spec.ProxyUser
 
+	cm.Data["APPDYNAMICS_CLUSTER_MONITORED_NAMESPACES"] = strings.Join(clusterAgent.Spec.NsToMonitor, ",")
 	cm.Data["APPDYNAMICS_CLUSTER_EVENT_UPLOAD_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.EventUploadInterval)
 	cm.Data["APPDYNAMICS_CLUSTER_CONTAINER_REGISTRATION_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.ContainerRegistrationInterval)
 	cm.Data["APPDYNAMICS_CLUSTER_HTTP_CLIENT_TIMEOUT_INTERVAL"] = strconv.Itoa(clusterAgent.Spec.HttpClientTimeout)
@@ -446,12 +447,20 @@ metric-upload-retry-count: %d
 metric-upload-retry-interval-milliseconds: %d
 max-pods-to-register-count: %d
 max-pod-logs-tail-lines-count: %d
-pod-filter: %s
-monitored-namespaces: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
+pod-filter: %s`, clusterAgent.Spec.MetricsSyncInterval, clusterAgent.Spec.ClusterMetricsSyncInterval, clusterAgent.Spec.MetadataSyncInterval,
 		clusterAgent.Spec.ContainerBatchSize, clusterAgent.Spec.PodBatchSize,
 		clusterAgent.Spec.MetricUploadRetryCount, clusterAgent.Spec.MetricUploadRetryIntervalMilliSeconds,
 		clusterAgent.Spec.MaxPodsToRegisterCount, clusterAgent.Spec.MaxPodLogsTailLinesCount,
-		createPodFilterString(clusterAgent), strings.Join(clusterAgent.Spec.NsToMonitor, ","))
+		createPodFilterString(clusterAgent))
+
+	if clusterAgent.Spec.NsToMonitorRegex != "" {
+		yml = fmt.Sprintf(`%s
+ns-to-monitor-regex: %s`, yml, clusterAgent.Spec.NsToMonitorRegex)
+	}
+	if clusterAgent.Spec.NsToExcludeRegex != "" {
+		yml = fmt.Sprintf(`%s
+ns-to-exclude-regex: %s`, yml, clusterAgent.Spec.NsToExcludeRegex)
+	}
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: AGENT_MON_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
