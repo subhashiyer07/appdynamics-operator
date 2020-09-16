@@ -510,6 +510,7 @@ container-match-string: %s
 netviz-info: %v
 run-as-user: %d
 run-as-group: %d
+number-of-task-workers: %d
 app-name-strategy: %s
 number-of-task-workers: %d
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
