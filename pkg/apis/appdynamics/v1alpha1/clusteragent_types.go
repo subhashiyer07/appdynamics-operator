@@ -117,6 +117,7 @@ type ClusteragentSpec struct {
 	AgentSSLPassword             string                `json:"agentSSLPassword,omitempty"`
 	PodFilter                    ClusteragentPodFilter `json:"podFilter,omitempty"`
 	ImageInfoMap                 map[string]ImageInfo  `json:"imageInfo,omitempty"`
+	NumberOfTaskWorkers          int                   `json:"numberOfTaskWorkers,omitempty"`
 
 	//snapshot schemas
 	PodSchemaName       string `json:"podSchemaName,omitempty"`
