@@ -11,7 +11,17 @@ LABEL name="AppDynamics ClusterAgent Operator" \
 
 RUN apk upgrade --update --no-cache
 
-USER nobody
+ENV OPERATOR=appdynamics-operator \
+    USER_UID=1001 \
+    USER_NAME=appdynamics-operator
+
 
 ADD build/_output/bin/appdynamics-operator /usr/local/bin/appdynamics-operator
 ADD LICENSE /licenses/
+ADD build/bin /usr/local/bin
+
+RUN  /usr/local/bin/ensure-user.sh
+
+ENTRYPOINT ["/usr/local/bin/start.sh"]
+
+USER ${USER_UID}

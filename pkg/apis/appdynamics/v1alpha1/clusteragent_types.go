@@ -31,6 +31,8 @@ type ClusteragentSpec struct {
 	ProxyUrl           string                      `json:"proxyUrl,omitempty"`
 	ProxyUser          string                      `json:"proxyUser,omitempty"`
 	ProxyPass          string                      `json:"proxyPass,omitempty"`
+	NsToMonitorRegex   string                      `json:"nsToMonitorRegex,omitempty"`
+	NsToExcludeRegex   string                      `json:"nsToExcludeRegex,omitempty"`
 
 	//limits
 	EventAPILimit                         int    `json:"eventAPILimit,omitempty"`
@@ -116,6 +118,8 @@ type ClusteragentSpec struct {
 	PodFilter                    ClusteragentPodFilter `json:"podFilter,omitempty"`
 	ImageInfoMap                 map[string]ImageInfo  `json:"imageInfo,omitempty"`
 	ImagePullPolicy              string                `json:"imagePullPolicy,omitempty"`
+	NumberOfTaskWorkers          int                   `json:"numberOfTaskWorkers,omitempty"`
+
 
 	//snapshot schemas
 	PodSchemaName       string `json:"podSchemaName,omitempty"`
