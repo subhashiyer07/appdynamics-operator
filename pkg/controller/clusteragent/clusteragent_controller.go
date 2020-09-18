@@ -511,13 +511,14 @@ netviz-info: %v
 run-as-user: %d
 run-as-group: %d
 app-name-strategy: %s
+image-pull-policy: %s
 number-of-task-workers: %d
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
 		mapToJsonString(clusterAgent.Spec.DefaultLabelMatch), imageInfoMapToJsonString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.AppNameLabel, clusterAgent.Spec.InstrumentContainer,
 		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), clusterAgent.Spec.RunAsUser, clusterAgent.Spec.RunAsGroup,
-		clusterAgent.Spec.AppNameStrategy, clusterAgent.Spec.NumberOfTaskWorkers, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.AppNameStrategy, clusterAgent.Spec.ImagePullPolicy, clusterAgent.Spec.NumberOfTaskWorkers, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -907,6 +908,10 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 
 	if clusterAgent.Spec.AppNameStrategy == "" {
 		clusterAgent.Spec.AppNameStrategy = MANUAL_APPNAME_STRATEGY
+	}
+
+	if clusterAgent.Spec.ImagePullPolicy == "" {
+		clusterAgent.Spec.ImagePullPolicy = "IfNotPresent"
 	}
 
 	setInstrumentationRuleDefault(clusterAgent)
