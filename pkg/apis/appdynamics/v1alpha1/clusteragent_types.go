@@ -119,6 +119,9 @@ type ClusteragentSpec struct {
 	ImageInfoMap                 map[string]ImageInfo  `json:"imageInfo,omitempty"`
 	ImagePullPolicy              string                `json:"imagePullPolicy,omitempty"`
 	NumberOfTaskWorkers          int                   `json:"numberOfTaskWorkers,omitempty"`
+	DefaultAnalyticsHost 		 string				   `json:"defaultAnalyticsHost,omitempty"`
+	DefaultAnalyticsPort         int				   `json:"defaultAnalyticsPort,omitempty"`
+	DefaultAnalyticsSslEnabled   bool                  `json:"defaultAnalyticsSslEnabled,omitempty"`
 
 
 	//snapshot schemas
@@ -202,6 +205,9 @@ type InstrumentationRule struct {
 	NetvizInfo               NetvizInfo          `json:"netvizInfo,omitempty"`
 	RunAsUser                int64               `json:"runAsUser,omitempty"`
 	RunAsGroup               int64               `json:"runAsGroup,omitempty"`
+	AnalyticsHost 			 string				 `json:"analyticsHost,omitempty"`
+	AnalyticsPort            int				 `json:"analyticsPort,omitempty"`
+	AnalyticsSslEnabled      bool                `json:"analyticsSslEnabled,omitempty"`
 }
 
 func init() {

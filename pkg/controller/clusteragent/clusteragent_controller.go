@@ -513,12 +513,15 @@ run-as-group: %d
 app-name-strategy: %s
 image-pull-policy: %s
 number-of-task-workers: %d
+default-analytics-host: %s
+default-analytics-port: %d
+default-analytics-ssl-enabled: %t
 instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgent.Spec.DefaultInstrumentMatchString,
 		mapToJsonString(clusterAgent.Spec.DefaultLabelMatch), imageInfoMapToJsonString(clusterAgent.Spec.ImageInfoMap), clusterAgent.Spec.DefaultInstrumentationTech,
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.AppNameLabel, clusterAgent.Spec.InstrumentContainer,
 		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), clusterAgent.Spec.RunAsUser, clusterAgent.Spec.RunAsGroup,
-		clusterAgent.Spec.AppNameStrategy, clusterAgent.Spec.ImagePullPolicy, clusterAgent.Spec.NumberOfTaskWorkers, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.AppNameStrategy, clusterAgent.Spec.ImagePullPolicy, clusterAgent.Spec.NumberOfTaskWorkers, clusterAgent.Spec.DefaultAnalyticsHost, clusterAgent.Spec.DefaultAnalyticsPort, clusterAgent.Spec.DefaultAnalyticsSslEnabled, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -966,6 +969,18 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 		if clusterAgent.Spec.InstrumentationRules[i].RunAsGroup == 0 {
 			clusterAgent.Spec.InstrumentationRules[i].RunAsGroup = clusterAgent.Spec.RunAsGroup
 		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].AnalyticsHost == "" && clusterAgent.Spec.InstrumentationRules[i].AnalyticsPort == 0 {
+			clusterAgent.Spec.InstrumentationRules[i].AnalyticsSslEnabled = clusterAgent.Spec.DefaultAnalyticsSslEnabled
+		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].AnalyticsHost == "" {
+			clusterAgent.Spec.InstrumentationRules[i].AnalyticsHost = clusterAgent.Spec.DefaultAnalyticsHost
+		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].AnalyticsPort == 0 {
+			clusterAgent.Spec.InstrumentationRules[i].AnalyticsPort = clusterAgent.Spec.DefaultAnalyticsPort
+		}
 	}
 }
 
@@ -1169,6 +1184,9 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 			"run-as-user":            rule.RunAsUser,
 			"run-as-group":           rule.RunAsGroup,
 			"app-name-label":         rule.AppNameLabel,
+			"analytics-host":         rule.AnalyticsHost,
+			"analytics-port":         rule.AnalyticsPort,
+			"analytics-ssl-enabled":  rule.AnalyticsSslEnabled,
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}
