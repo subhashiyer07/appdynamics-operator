@@ -970,9 +970,12 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 			clusterAgent.Spec.InstrumentationRules[i].RunAsGroup = clusterAgent.Spec.RunAsGroup
 		}
 
+		if clusterAgent.Spec.InstrumentationRules[i].AnalyticsHost == "" && clusterAgent.Spec.InstrumentationRules[i].AnalyticsPort == 0 {
+			clusterAgent.Spec.InstrumentationRules[i].AnalyticsSslEnabled = clusterAgent.Spec.DefaultAnalyticsSslEnabled
+		}
+
 		if clusterAgent.Spec.InstrumentationRules[i].AnalyticsHost == "" {
 			clusterAgent.Spec.InstrumentationRules[i].AnalyticsHost = clusterAgent.Spec.DefaultAnalyticsHost
-			clusterAgent.Spec.InstrumentationRules[i].AnalyticsSslEnabled = clusterAgent.Spec.DefaultAnalyticsSslEnabled
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].AnalyticsPort == 0 {
