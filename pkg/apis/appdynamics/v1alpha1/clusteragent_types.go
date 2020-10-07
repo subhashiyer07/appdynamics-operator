@@ -117,12 +117,10 @@ type ClusteragentSpec struct {
 	AgentSSLPassword             string                `json:"agentSSLPassword,omitempty"`
 	PodFilter                    ClusteragentPodFilter `json:"podFilter,omitempty"`
 	ImageInfoMap                 map[string]ImageInfo  `json:"imageInfo,omitempty"`
-	ImagePullPolicy              string                `json:"imagePullPolicy,omitempty"`
 	NumberOfTaskWorkers          int                   `json:"numberOfTaskWorkers,omitempty"`
-	DefaultAnalyticsHost 		 string				   `json:"defaultAnalyticsHost,omitempty"`
-	DefaultAnalyticsPort         int				   `json:"defaultAnalyticsPort,omitempty"`
+	DefaultAnalyticsHost         string                `json:"defaultAnalyticsHost,omitempty"`
+	DefaultAnalyticsPort         int                   `json:"defaultAnalyticsPort,omitempty"`
 	DefaultAnalyticsSslEnabled   bool                  `json:"defaultAnalyticsSslEnabled,omitempty"`
-
 
 	//snapshot schemas
 	PodSchemaName       string `json:"podSchemaName,omitempty"`
@@ -176,8 +174,9 @@ type NetvizInfo struct {
 }
 
 type ImageInfo struct {
-	Image          string `json:"image"`
-	AgentMountPath string `json:"agentMountPath"`
+	Image           string `json:"image"`
+	AgentMountPath  string `json:"agentMountPath"`
+	ImagePullPolicy string `json:"imagePullPolicy"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
@@ -205,8 +204,8 @@ type InstrumentationRule struct {
 	NetvizInfo               NetvizInfo          `json:"netvizInfo,omitempty"`
 	RunAsUser                int64               `json:"runAsUser,omitempty"`
 	RunAsGroup               int64               `json:"runAsGroup,omitempty"`
-	AnalyticsHost 			 string				 `json:"analyticsHost,omitempty"`
-	AnalyticsPort            int				 `json:"analyticsPort,omitempty"`
+	AnalyticsHost            string              `json:"analyticsHost,omitempty"`
+	AnalyticsPort            int                 `json:"analyticsPort,omitempty"`
 	AnalyticsSslEnabled      bool                `json:"analyticsSslEnabled,omitempty"`
 }
 
