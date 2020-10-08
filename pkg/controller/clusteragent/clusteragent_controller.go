@@ -48,6 +48,7 @@ const (
 	JAVA_LANGUAGE           string = "java"
 	AppDJavaAttachImage            = "docker.io/appdynamics/java-agent:latest"
 	AGENT_MOUNT_PATH               = "/opt/appdynamics"
+	IMAGE_PULL_POLICY              = "IfNotPresent"
 	Deployment                     = "Deployment"
 	JAVA_TOOL_OPTIONS              = "JAVA_TOOL_OPTIONS"
 	FIRST                          = "first"
@@ -511,7 +512,6 @@ netviz-info: %v
 run-as-user: %d
 run-as-group: %d
 app-name-strategy: %s
-image-pull-policy: %s
 number-of-task-workers: %d
 default-analytics-host: %s
 default-analytics-port: %d
@@ -521,7 +521,7 @@ instrumentation-rules: %v`, clusterAgent.Spec.InstrumentationMethod, clusterAgen
 		clusterAgent.Spec.NsToInstrumentRegex, strings.Join(clusterAgent.Spec.ResourcesToInstrument, ","), clusterAgent.Spec.DefaultEnv,
 		clusterAgent.Spec.DefaultCustomConfig, clusterAgent.Spec.DefaultAppName, clusterAgent.Spec.AppNameLabel, clusterAgent.Spec.InstrumentContainer,
 		clusterAgent.Spec.DefaultContainerMatchString, netvizInfoToJsonString(clusterAgent.Spec.NetvizInfo), clusterAgent.Spec.RunAsUser, clusterAgent.Spec.RunAsGroup,
-		clusterAgent.Spec.AppNameStrategy, clusterAgent.Spec.ImagePullPolicy, clusterAgent.Spec.NumberOfTaskWorkers, clusterAgent.Spec.DefaultAnalyticsHost, clusterAgent.Spec.DefaultAnalyticsPort, clusterAgent.Spec.DefaultAnalyticsSslEnabled, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
+		clusterAgent.Spec.AppNameStrategy, clusterAgent.Spec.NumberOfTaskWorkers, clusterAgent.Spec.DefaultAnalyticsHost, clusterAgent.Spec.DefaultAnalyticsPort, clusterAgent.Spec.DefaultAnalyticsSslEnabled, instrumentationRulesToJsonString(clusterAgent.Spec.InstrumentationRules))
 
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INSTRUMENTATION_CONFIG_NAME, Namespace: clusterAgent.Namespace}, cm)
@@ -864,8 +864,9 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 
 	defaultImageInfoMap := map[string]appdynamicsv1alpha1.ImageInfo{
 		JAVA_LANGUAGE: {
-			Image:          AppDJavaAttachImage,
-			AgentMountPath: AGENT_MOUNT_PATH,
+			Image:           AppDJavaAttachImage,
+			AgentMountPath:  AGENT_MOUNT_PATH,
+			ImagePullPolicy: IMAGE_PULL_POLICY,
 		},
 	}
 	if clusterAgent.Spec.ImageInfoMap == nil {
@@ -879,6 +880,9 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 			}
 			if javaImageInfo.AgentMountPath == "" {
 				javaImageInfo.AgentMountPath = AGENT_MOUNT_PATH
+			}
+			if javaImageInfo.ImagePullPolicy == "" {
+				javaImageInfo.ImagePullPolicy = IMAGE_PULL_POLICY
 			}
 			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = javaImageInfo
 		} else {
@@ -913,10 +917,6 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 		clusterAgent.Spec.AppNameStrategy = MANUAL_APPNAME_STRATEGY
 	}
 
-	if clusterAgent.Spec.ImagePullPolicy == "" {
-		clusterAgent.Spec.ImagePullPolicy = "IfNotPresent"
-	}
-
 	setInstrumentationRuleDefault(clusterAgent)
 }
 
@@ -943,6 +943,9 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 			}
 			if clusterAgent.Spec.InstrumentationRules[i].ImageInfo.AgentMountPath == "" {
 				clusterAgent.Spec.InstrumentationRules[i].ImageInfo.AgentMountPath = AGENT_MOUNT_PATH
+			}
+			if clusterAgent.Spec.InstrumentationRules[i].ImageInfo.ImagePullPolicy == "" {
+				clusterAgent.Spec.InstrumentationRules[i].ImageInfo.ImagePullPolicy = IMAGE_PULL_POLICY
 			}
 		}
 
@@ -1140,8 +1143,9 @@ func imageInfoMapToJsonString(imageInfo map[string]appdynamicsv1alpha1.ImageInfo
 
 func imageInfoToMap(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
 	return map[string]string{
-		"image":            imageInfo.Image,
-		"agent-mount-path": imageInfo.AgentMountPath,
+		"image":             imageInfo.Image,
+		"agent-mount-path":  imageInfo.AgentMountPath,
+		"image-pull-policy": imageInfo.ImagePullPolicy,
 	}
 }
 
