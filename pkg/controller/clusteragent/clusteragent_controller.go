@@ -46,7 +46,11 @@ const (
 	ENV_INSTRUMENTATION     string = "Env"
 	NO_INSTRUMENTATION             = "None"
 	JAVA_LANGUAGE           string = "java"
+	DOTNET_LANGUAGE         string = "dotnetcore"
+	NODEJS_LANGUAGE         string = "nodejs"
 	AppDJavaAttachImage            = "docker.io/appdynamics/java-agent:latest"
+	AppDDotNetAttachImage          = "docker.io/appdynamics/dotnet-core-agent:latest"
+	AppDNodeJSAttachImage          = "docker.io/appdynamics/nodejs-agent:20.8.0-stretch-slimv10"
 	AGENT_MOUNT_PATH               = "/opt/appdynamics"
 	IMAGE_PULL_POLICY              = "IfNotPresent"
 	Deployment                     = "Deployment"
@@ -868,25 +872,36 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 			AgentMountPath:  AGENT_MOUNT_PATH,
 			ImagePullPolicy: IMAGE_PULL_POLICY,
 		},
+		DOTNET_LANGUAGE: {
+			Image:           AppDDotNetAttachImage,
+			AgentMountPath:  AGENT_MOUNT_PATH,
+			ImagePullPolicy: IMAGE_PULL_POLICY,
+		},
+		NODEJS_LANGUAGE: {
+			Image:           AppDNodeJSAttachImage,
+			AgentMountPath:  AGENT_MOUNT_PATH,
+			ImagePullPolicy: IMAGE_PULL_POLICY,
+		},
 	}
 	if clusterAgent.Spec.ImageInfoMap == nil {
 		clusterAgent.Spec.ImageInfoMap = defaultImageInfoMap
 	} else {
-		//Handle only java for now
-		javaImageInfo, exists := clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE]
-		if exists {
-			if javaImageInfo.Image == "" {
-				javaImageInfo.Image = AppDJavaAttachImage
+		for _, language := range []string{JAVA_LANGUAGE, DOTNET_LANGUAGE, NODEJS_LANGUAGE} {
+			imageInfo, exists := clusterAgent.Spec.ImageInfoMap[language]
+			if exists {
+				if imageInfo.Image == "" {
+					imageInfo.Image = defaultImageInfoMap[language].Image
+				}
+				if imageInfo.AgentMountPath == "" {
+					imageInfo.AgentMountPath = defaultImageInfoMap[language].AgentMountPath
+				}
+				if imageInfo.ImagePullPolicy == "" {
+					imageInfo.ImagePullPolicy = defaultImageInfoMap[language].ImagePullPolicy
+				}
+				clusterAgent.Spec.ImageInfoMap[language] = imageInfo
+			} else {
+				clusterAgent.Spec.ImageInfoMap[language] = defaultImageInfoMap[language]
 			}
-			if javaImageInfo.AgentMountPath == "" {
-				javaImageInfo.AgentMountPath = AGENT_MOUNT_PATH
-			}
-			if javaImageInfo.ImagePullPolicy == "" {
-				javaImageInfo.ImagePullPolicy = IMAGE_PULL_POLICY
-			}
-			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = javaImageInfo
-		} else {
-			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = defaultImageInfoMap[JAVA_LANGUAGE]
 		}
 	}
 
