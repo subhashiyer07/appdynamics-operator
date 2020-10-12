@@ -1164,6 +1164,12 @@ func imageInfoToMap(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
 	}
 }
 
+func customConfigInfoToMap(customConfig appdynamicsv1alpha1.CustomConfigInfo) map[string]string {
+	return map[string]string{
+		"config-map-name":      customConfig.ConfigMapName,
+		"custom-config-sub-path": customConfig.MountSubPath,
+	}
+}
 func mapToJsonString(mapToConvert []map[string]string) string {
 	valueToConvert := convertToMapOfArray(mapToConvert)
 	json, err := json.Marshal(valueToConvert)
@@ -1206,6 +1212,7 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 			"analytics-host":         rule.AnalyticsHost,
 			"analytics-port":         rule.AnalyticsPort,
 			"analytics-ssl-enabled":  rule.AnalyticsSslEnabled,
+			"custom-settings-info":   customConfigInfoToMap(rule.CustomConfigInfo),
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}
