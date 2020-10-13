@@ -181,7 +181,7 @@ type ImageInfo struct {
 
 type CustomConfigInfo struct {
 	ConfigMapName   string `json:"configMapName"`
-    MountSubPath    string `json:"mountSubPath"`
+   SubDir          string `json:"subDir"`
 }
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
@@ -211,7 +211,7 @@ type InstrumentationRule struct {
 	AnalyticsHost            string              `json:"analyticsHost,omitempty"`
 	AnalyticsPort            int                 `json:"analyticsPort,omitempty"`
 	AnalyticsSslEnabled      bool                `json:"analyticsSslEnabled,omitempty"`
-	CustomConfigInfo         CustomConfigInfo    `json:"customAgentConfigSource,omitempty"`
+	CustomConfigInfo         []CustomConfigInfo `json:"customAgentConfigSource,omitempty"`
 }
 
 func init() {

@@ -1164,11 +1164,15 @@ func imageInfoToMap(imageInfo appdynamicsv1alpha1.ImageInfo) map[string]string {
 	}
 }
 
-func customConfigInfoToMap(customConfig appdynamicsv1alpha1.CustomConfigInfo) map[string]string {
-	return map[string]string{
-		"config-map-name":      customConfig.ConfigMapName,
-		"custom-config-sub-path": customConfig.MountSubPath,
+func customAgentConfigsToArrayMap(customConfigs []appdynamicsv1alpha1.CustomConfigInfo) []map[string]string {
+	out := make([]map[string]string, 0)
+	for _, customConfig := range customConfigs {
+		out = append(out, map[string]string{
+			"config-map-name":      customConfig.ConfigMapName,
+			"sub-dir":              customConfig.SubDir,
+		})
 	}
+	return out
 }
 func mapToJsonString(mapToConvert []map[string]string) string {
 	valueToConvert := convertToMapOfArray(mapToConvert)
@@ -1212,7 +1216,7 @@ func instrumentationRulesToJsonString(rules []appdynamicsv1alpha1.Instrumentatio
 			"analytics-host":         rule.AnalyticsHost,
 			"analytics-port":         rule.AnalyticsPort,
 			"analytics-ssl-enabled":  rule.AnalyticsSslEnabled,
-			"custom-settings-info":   customConfigInfoToMap(rule.CustomConfigInfo),
+			"custom-settings-info":   customAgentConfigsToArrayMap(rule.CustomConfigInfo),
 		}
 		rulesOut = append(rulesOut, ruleMap)
 	}
