@@ -768,6 +768,12 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 			MountPath: "/opt/appdynamics/ssl",
 		}
 		dep.Spec.Template.Spec.Containers[0].VolumeMounts = append(dep.Spec.Template.Spec.Containers[0].VolumeMounts, sslMount)
+
+		customSSLSecret := corev1.EnvVar{
+			Name: "APPDYNAMICS_CUSTOM_SSL_SECRET",
+			Value: clusterAgent.Spec.CustomSSLSecret,
+		}
+		dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, customSSLSecret)
 	}
 
 	//security context override
