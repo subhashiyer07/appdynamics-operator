@@ -1,0 +1,10 @@
+apiVersion: appdynamics.com/v1alpha1
+kind: Clustercollector
+metadata:
+  name: k8s-cluster-collector
+  namespace: appdynamics
+spec:
+  account: account1
+  controllerUrl: localhost
+  image: vikyath/infra-agent-cluster-collector:latest
+  serviceAccountName: appdynamics-cluster-agent
