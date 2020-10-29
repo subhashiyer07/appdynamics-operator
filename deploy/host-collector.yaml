@@ -1,0 +1,8 @@
+apiVersion: appdynamics.com/v1alpha1
+kind: Hostcollector
+metadata:
+  name: k8s-host-collector
+  namespace: appdynamics
+spec:
+  image: vikyath/host-collector:latest
+  serviceAccountName: appdynamics-cluster-agent
