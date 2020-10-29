@@ -8,8 +8,6 @@ import (
 // ClustercollectorSpec defines the desired state of Clustercollector
 type ClustercollectorSpec struct {
 	Image              string                      `json:"image,omitempty"`
-	ControllerUrl      string                      `json:"controllerUrl"`
-	Account            string                      `json:"account,omitempty"`
 	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
 	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
 }

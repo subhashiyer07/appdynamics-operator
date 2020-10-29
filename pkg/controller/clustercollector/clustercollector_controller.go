@@ -183,32 +183,13 @@ func (r *ReconcileClustercollector) updateStatus(clusterCollector *appdynamicsv1
 }
 
 func (r *ReconcileClustercollector) hasBreakingChanges(clusterCollector *appdynamicsv1alpha1.Clustercollector, existingDeployment *appsv1.Deployment) (bool, bool) {
-	breakingChanges := false
-	updateDeployment := false
-
 	fmt.Println("Checking for breaking changes...")
-
-	if existingDeployment.Annotations != nil {
-		if oldJson, ok := existingDeployment.Annotations[OLD_SPEC]; ok && oldJson != "" {
-			var oldSpec appdynamicsv1alpha1.Clustercollector
-			errJson := json.Unmarshal([]byte(oldJson), &oldSpec)
-			if errJson != nil {
-				log.Error(errJson, "Unable to retrieve the old spec from annotations", "clusterCollector.Namespace", clusterCollector.Namespace, "clusterCollector.Name", clusterCollector.Name)
-			}
-
-			if oldSpec.Spec.ControllerUrl != clusterCollector.Spec.ControllerUrl || oldSpec.Spec.Account != clusterCollector.Spec.Account {
-				breakingChanges = true
-			}
-		}
-	}
-
 	if clusterCollector.Spec.Image != "" && existingDeployment.Spec.Template.Spec.Containers[0].Image != clusterCollector.Spec.Image {
 		fmt.Printf("Image changed from has changed: %s	to	%s. Updating....\n", existingDeployment.Spec.Template.Spec.Containers[0].Image, clusterCollector.Spec.Image)
 		existingDeployment.Spec.Template.Spec.Containers[0].Image = clusterCollector.Spec.Image
 		return false, true
 	}
-
-	return breakingChanges, updateDeployment
+	return false, false
 }
 
 func (r *ReconcileClustercollector) newCollectorDeployment(clusterCollector *appdynamicsv1alpha1.Clustercollector) *appsv1.Deployment {
