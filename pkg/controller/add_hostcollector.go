@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"appdynamics-operator/pkg/controller/hostcollector"
+	"github.com/Appdynamics/appdynamics-operator/pkg/controller/hostcollector"
 )
 
 func init() {
