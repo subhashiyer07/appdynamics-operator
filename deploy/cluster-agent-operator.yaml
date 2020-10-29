@@ -11,8 +11,52 @@ spec:
     singular: clusteragent
   scope: Namespaced
   version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
   subresources:
     status: {}
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: clustercollectors.appdynamics.com
+spec:
+  group: appdynamics.com
+  names:
+    kind: Clustercollector
+    listKind: ClustercollectorList
+    plural: clustercollectors
+    singular: clustercollector
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  name: hostcollectors.appdynamics.com
+spec:
+  group: appdynamics.com
+  names:
+    kind: Hostcollector
+    listKind: HostcollectorList
+    plural: hostcollectors
+    singular: hostcollector
+  scope: Namespaced
+  subresources:
+    status: {}
+  version: v1alpha1
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
@@ -84,7 +128,6 @@ rules:
   - apiGroups:
       - ""
     resources:
-      - pods
       - services
       - configmaps
       - secrets
@@ -129,8 +172,8 @@ rules:
     resources:
       - '*'
       - clusteragents
-      - infravizs
-      - adams
+      - clustercollectors
+      - hostcollectors
     verbs:
       - "*"
 ---
@@ -162,12 +205,10 @@ spec:
       labels:
         name: appdynamics-operator
     spec:
-      nodeSelector:
-        kubernetes.io/os: linux
       serviceAccountName: appdynamics-operator
       containers:
         - name: appdynamics-operator
-          image: docker.io/appdynamics/cluster-agent-operator:latest
+          image: docker.io/appdynamics/cluster-agent-operator:0.6.3
           ports:
             - containerPort: 60000
               name: metrics
@@ -192,3 +233,125 @@ spec:
                   fieldPath: metadata.name
             - name: OPERATOR_NAME
               value: "appdynamics-operator"
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: appdynamics-cluster-agent
+  namespace: appdynamics
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: appdynamics-cluster-agent
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/log
+      - endpoints
+      - persistentvolumeclaims
+      - resourcequotas
+      - nodes
+      - events
+      - namespaces
+      - services
+      - configmaps
+      - secrets
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - statefulsets
+      - deployments
+      - replicasets
+    verbs:
+      - get
+      - watch
+      - list
+  - apiGroups:
+      - "batch"
+      - "extensions"
+    resources:
+      - "jobs"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+  - apiGroups:
+      - metrics.k8s.io
+    resources:
+      - pods
+      - nodes
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - appdynamics.com
+    resources:
+      - '*'
+      - clusteragents
+      - clustercollectors
+      - hostcollectors
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: appdynamics-cluster-agent-instrumentation
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - pods/exec
+      - secrets
+      - configmaps
+    verbs:
+      - create
+      - update
+      - delete
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - statefulsets
+      - deployments
+      - replicasets
+    verbs:
+      - update
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: appdynamics-cluster-agent
+subjects:
+  - kind: ServiceAccount
+    name: appdynamics-cluster-agent
+    namespace: appdynamics
+roleRef:
+  kind: ClusterRole
+  name: appdynamics-cluster-agent
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: appdynamics-cluster-agent-instrumentation
+subjects:
+  - kind: ServiceAccount
+    name: appdynamics-cluster-agent
+    namespace: appdynamics
+roleRef:
+  kind: ClusterRole
+  name: appdynamics-cluster-agent-instrumentation
+  apiGroup: rbac.authorization.k8s.io
