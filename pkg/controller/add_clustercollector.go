@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"appdynamics-operator/pkg/controller/clustercollector"
+	"github.com/Appdynamics/appdynamics-operator/pkg/controller/clustercollector"
 )
 
 func init() {
