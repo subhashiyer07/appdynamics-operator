@@ -143,10 +143,10 @@ type ClusteragentSpec struct {
 }
 
 type ClusteragentPodFilter struct {
-	WhitelistedNames  []string            `json:"whitelistedNames,omitempty"`
-	BlacklistedNames  []string            `json:"blacklistedNames,omitempty"`
-	WhitelistedLabels []map[string]string `json:"whitelistedLabels,omitempty"`
-	BlacklistedLabels []map[string]string `json:"blacklistedLabels,omitempty"`
+	WhitelistedNames  []string            `json:"allowlistedNames,omitempty"`
+	BlacklistedNames  []string            `json:"blocklistedNames,omitempty"`
+	WhitelistedLabels []map[string]string `json:"allowlistedLabels,omitempty"`
+	BlacklistedLabels []map[string]string `json:"blocklistedLabels,omitempty"`
 }
 
 // ClusteragentStatus defines the observed state of Clusteragent

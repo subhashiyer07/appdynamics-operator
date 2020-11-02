@@ -40,8 +40,8 @@ const (
 	AGENT_SSL_CONFIG_NAME       string = "appd-agent-ssl-config"
 	AGENT_SSL_CRED_STORE_NAME   string = "appd-agent-ssl-store"
 	OLD_SPEC                    string = "cluster-agent-spec"
-	WHITELISTED                 string = "whitelisted"
-	BLACKLISTED                 string = "blacklisted"
+	ALLOWLISTED                 string = "allowlisted"
+	BLOCKLISTED                 string = "blocklisted"
 
 	ENV_INSTRUMENTATION     string = "Env"
 	NO_INSTRUMENTATION             = "None"
@@ -1112,22 +1112,22 @@ func createPodFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) strin
 	podFilterString.WriteString("{")
 	if clusterAgent.Spec.PodFilter.BlacklistedLabels != nil {
 		podFilterString.
-			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.BlacklistedLabels, BLACKLISTED) + "],")
+			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.BlacklistedLabels, BLOCKLISTED) + "],")
 	}
 
 	if clusterAgent.Spec.PodFilter.WhitelistedLabels != nil {
 		podFilterString.
-			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.WhitelistedLabels, WHITELISTED) + "],")
+			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.WhitelistedLabels, ALLOWLISTED) + "],")
 	}
 
 	if clusterAgent.Spec.PodFilter.BlacklistedNames != nil {
 		podFilterString.
-			WriteString(parseNameField(clusterAgent.Spec.PodFilter.BlacklistedNames, BLACKLISTED) + "],")
+			WriteString(parseNameField(clusterAgent.Spec.PodFilter.BlacklistedNames, BLOCKLISTED) + "],")
 	}
 
 	if clusterAgent.Spec.PodFilter.WhitelistedNames != nil {
 		podFilterString.
-			WriteString(parseNameField(clusterAgent.Spec.PodFilter.WhitelistedNames, WHITELISTED) + "],")
+			WriteString(parseNameField(clusterAgent.Spec.PodFilter.WhitelistedNames, ALLOWLISTED) + "],")
 	}
 	return strings.TrimRight(podFilterString.String(), ",") + "}"
 }
