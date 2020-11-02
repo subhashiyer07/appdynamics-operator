@@ -1110,24 +1110,24 @@ func parseNameField(names []string, namesType string) string {
 func createPodFilterString(clusterAgent *appdynamicsv1alpha1.Clusteragent) string {
 	var podFilterString strings.Builder
 	podFilterString.WriteString("{")
-	if clusterAgent.Spec.PodFilter.BlacklistedLabels != nil {
+	if clusterAgent.Spec.PodFilter.BlocklistedLabels != nil {
 		podFilterString.
-			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.BlacklistedLabels, BLOCKLISTED) + "],")
+			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.BlocklistedLabels, BLOCKLISTED) + "],")
 	}
 
-	if clusterAgent.Spec.PodFilter.WhitelistedLabels != nil {
+	if clusterAgent.Spec.PodFilter.AllowlistedLabels != nil {
 		podFilterString.
-			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.WhitelistedLabels, ALLOWLISTED) + "],")
+			WriteString(parseLabelField(clusterAgent.Spec.PodFilter.AllowlistedLabels, ALLOWLISTED) + "],")
 	}
 
-	if clusterAgent.Spec.PodFilter.BlacklistedNames != nil {
+	if clusterAgent.Spec.PodFilter.BlocklistedNames != nil {
 		podFilterString.
-			WriteString(parseNameField(clusterAgent.Spec.PodFilter.BlacklistedNames, BLOCKLISTED) + "],")
+			WriteString(parseNameField(clusterAgent.Spec.PodFilter.BlocklistedNames, BLOCKLISTED) + "],")
 	}
 
-	if clusterAgent.Spec.PodFilter.WhitelistedNames != nil {
+	if clusterAgent.Spec.PodFilter.AllowlistedNames != nil {
 		podFilterString.
-			WriteString(parseNameField(clusterAgent.Spec.PodFilter.WhitelistedNames, ALLOWLISTED) + "],")
+			WriteString(parseNameField(clusterAgent.Spec.PodFilter.AllowlistedNames, ALLOWLISTED) + "],")
 	}
 	return strings.TrimRight(podFilterString.String(), ",") + "}"
 }
