@@ -8,3 +8,4 @@ spec:
   appName: "Cluster2"
   logLevel: "DEBUG"
   stdoutLogging: "true"
+  image: "registry.connect.redhat.com/appdynamics/cluster-agent"
