@@ -194,8 +194,9 @@ func (r *ReconcileHostcollector) hasBreakingChanges(hostCollector *appdynamicsv1
 }
 
 func (r *ReconcileHostcollector) newCollectorDaemonSet(hostCollector *appdynamicsv1alpha1.Hostcollector) *appsv1.DaemonSet {
+	trueVal := true
 	if hostCollector.Spec.Image == "" {
-		hostCollector.Spec.Image = "vikyath/infra-agent-host-collector:latest"
+		hostCollector.Spec.Image = "vikyath/host-collector:latest"
 	}
 
 	if hostCollector.Spec.ServiceAccountName == "" {
@@ -224,28 +225,59 @@ func (r *ReconcileHostcollector) newCollectorDaemonSet(hostCollector *appdynamic
 				Spec: corev1.PodSpec{
 					ServiceAccountName: hostCollector.Spec.ServiceAccountName,
 					Containers: []corev1.Container{{
-						Env: []corev1.EnvVar{
-							{
-								Name: "APPDYNAMICS_AGENT_NAMESPACE",
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										FieldPath: "metadata.namespace",
-									},
-								},
-							},
-							{
-								Name: "NODE_NAME",
-								ValueFrom: &corev1.EnvVarSource{
-									FieldRef: &corev1.ObjectFieldSelector{
-										FieldPath: "spec.nodeName",
-									},
-								},
-							},
-						},
 						Image:           hostCollector.Spec.Image,
 						ImagePullPolicy: corev1.PullAlways,
 						Name:            "host-collector",
 						Resources:       hostCollector.Spec.Resources,
+						SecurityContext: &corev1.SecurityContext{
+							Privileged: &trueVal,
+						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "proc",
+							MountPath: "/host/proc",
+							ReadOnly:  true,
+						}, {
+							Name:      "var-run",
+							MountPath: "/var/run",
+						}, {
+							Name:      "sys",
+							MountPath: "/sys",
+							ReadOnly:  true,
+						}, {
+							Name:      "root",
+							MountPath: "/rootfs",
+							ReadOnly:  true,
+						}, {
+							Name:      "var-lib-docker",
+							MountPath: "/var/lib/docker/",
+							ReadOnly:  true,
+						}},
+					}},
+					Volumes: []corev1.Volume{{
+						Name: "proc",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/proc"},
+						},
+					}, {
+						Name: "var-run",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/var/run"},
+						},
+					}, {
+						Name: "sys",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/sys"},
+						},
+					}, {
+						Name: "root",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/"},
+						},
+					}, {
+						Name: "var-lib-docker",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/docker/"},
+						},
 					}},
 				},
 			},
