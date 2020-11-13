@@ -107,7 +107,7 @@ kubectl apply -f deploy/cluster-agent.yaml
 | `metricsSyncInterval` | Interval in seconds between sending container metrics to the Controller | Default 30 sec |
 | `clusterMetricsSyncInterval` | Interval in seconds between sending cluster-level metrics to the Controller | Default 60 sec |
 | `metadataSyncInterval` | Interval in seconds at which metadata is collected for containers and pods | Default 60 sec |
-| `podFilter` | Definitions of whitelisted/blacklisted names and labels to filter pods | Not set by default |
+| `podFilter` | Definitions of allowlisted/blocklisted names and labels to filter pods | Not set by default |
 | `containerBatchSize` |The Cluster Agent checks for containers and registers them with the Controller. This process is known as a container registration cycle. The containers are sent to the Controller in batches, and the containerBatchSize is the maximum number of containers per batch in one cycle. | Default 5 containers |
 | `podBatchSize` | The Cluster Agent checks for pods and registers them with the Controller. This process is known as a pod registration cycle. The pods are sent to the Controller in batches, and the podBatchSize is the maximum number of pods per batch in one registration cycle. | Default 6 pods |
 | `metricUploadRetryCount` | Number of times metric upload action to be attempted if unsuccessful the first time | Default is 3 |
@@ -163,14 +163,14 @@ Here is an example of the entire spec of the Clusteragent custom resource:
       nodeSelector:
         kubernetes.io/os: linux
       podFilter:
-        blacklistedLabels:
+        blocklistedLabels:
           - label1: value1
-        whitelistedLabels:
+        allowlistedLabels:
           - label1: value1
           - label2: value2
-        whitelistedNames:
+        allowlistedNames:
           - name1
-        blacklistedNames:
+        blocklistedNames:
           - name1
           - name2
       logLevel: "INFO"

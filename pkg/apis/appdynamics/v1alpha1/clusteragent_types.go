@@ -143,10 +143,10 @@ type ClusteragentSpec struct {
 }
 
 type ClusteragentPodFilter struct {
-	WhitelistedNames  []string            `json:"whitelistedNames,omitempty"`
-	BlacklistedNames  []string            `json:"blacklistedNames,omitempty"`
-	WhitelistedLabels []map[string]string `json:"whitelistedLabels,omitempty"`
-	BlacklistedLabels []map[string]string `json:"blacklistedLabels,omitempty"`
+	AllowlistedNames  []string            `json:"allowlistedNames,omitempty"`
+	BlocklistedNames  []string            `json:"blocklistedNames,omitempty"`
+	AllowlistedLabels []map[string]string `json:"allowlistedLabels,omitempty"`
+	BlocklistedLabels []map[string]string `json:"blocklistedLabels,omitempty"`
 }
 
 // ClusteragentStatus defines the observed state of Clusteragent
@@ -179,6 +179,10 @@ type ImageInfo struct {
 	ImagePullPolicy string `json:"imagePullPolicy"`
 }
 
+type CustomConfigInfo struct {
+	ConfigMapName   string `json:"configMapName"`
+   SubDir          string `json:"subDir"`
+}
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 // ClusteragentList contains a list of Clusteragent
@@ -207,6 +211,7 @@ type InstrumentationRule struct {
 	AnalyticsHost            string              `json:"analyticsHost,omitempty"`
 	AnalyticsPort            int                 `json:"analyticsPort,omitempty"`
 	AnalyticsSslEnabled      bool                `json:"analyticsSslEnabled,omitempty"`
+	CustomConfigInfo         []CustomConfigInfo `json:"customAgentConfigSource,omitempty"`
 }
 
 func init() {
