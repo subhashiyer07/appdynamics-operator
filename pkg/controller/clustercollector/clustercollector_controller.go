@@ -31,6 +31,10 @@ const (
 	OLD_SPEC string = "cluster-collector-spec"
 	ClUSTER_MON_CONFIG_NAME string = "cluster-collector-config"
 	INFRA_AGENT_CONFIG_NAME string = "infra-agent-config"
+	INFRA_AGENT_NAME string = "Infra Structure Agent"
+	CLUSTER_COLLECTOR string = "Cluster Monitor"
+	TYPE_COLLECTOR string = "Collector"
+	CLUSTER_COLLECTOR_PATH string = "./collectors/cluster-collector-linux-amd64"
 )
 
 var log = logf.Log.WithName("controller_clustercollector")
@@ -323,6 +327,12 @@ func setClusterCollectorConfigDefaults(clusterCollector *appdynamicsv1alpha1.Clu
 	if clusterCollector.Spec.LogLevel == "" {
 		clusterCollector.Spec.LogLevel = "INFO"
 	}
+	if clusterCollector.Spec.ExporterAddress == "" {
+		clusterCollector.Spec.ExporterAddress = "127.0.0.1"
+	}
+	if clusterCollector.Spec.ExporterPort == 0 {
+		clusterCollector.Spec.ExporterPort = 9100
+	}
 }
 
 func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
@@ -348,7 +358,7 @@ func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clusterc
 		clusterCollector.Spec.SystemConfigs.ClientLibSendUrl = "tcp://127.0.0.1:42387"
 	}
 	if clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl == "" {
-		clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl = "tcp://127.0.0.1:42387"
+		clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl = "tcp://127.0.0.1:4238"
 	}
 	if clusterCollector.Spec.SystemConfigs.LogLevel == "" {
 		clusterCollector.Spec.SystemConfigs.LogLevel = "INFO"
@@ -397,7 +407,8 @@ func (r *ReconcileClustercollector) ensureInfraAgentConfig(clusterCollector *app
 	}
 	portVal := strconv.Itoa(int(port))
 
-	yml := fmt.Sprintf(`controller-host: %s
+	yml := fmt.Sprintf(`name: %s 
+controller-host: %s
 controller-port: %s
 controller-account-name: %s
 controller-ssl-enabled: %s
@@ -413,7 +424,7 @@ debug-port: %s
 client-lib-send-url: %s
 client-lib-recv-url: %s
 log-level: %s
-debug-enabled: %t`, controllerDns, portVal, clusterCollector.Spec.Account, sslEnabled, true, clusterCollector.Spec.AccessSecret,
+debug-enabled: %t`, INFRA_AGENT_NAME, controllerDns, portVal, clusterCollector.Spec.Account, sslEnabled, true, clusterCollector.Spec.AccessSecret,
 clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl, clusterCollector.Spec.SystemConfigs.CollectorLibPort,
 clusterCollector.Spec.SystemConfigs.HttpClientTimeOut, clusterCollector.Spec.SystemConfigs.HttpBasicAuthEnabled,
 clusterCollector.Spec.SystemConfigs.ConfigChangeScanPeriod, clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod,
@@ -454,11 +465,20 @@ clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl, clusterCollector.Spec.Syst
 
 func (r *ReconcileClustercollector) ensureClusterCollectorConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
 
-	yml := fmt.Sprintf(`clusterName: %s
+	yml := fmt.Sprintf(`name: %s
+type: %s
+version: %s
+clusterName: %s
 nsToMonitor: %s
 nsToExclude: %s
-clusterMonitoringEnabled: %t`, clusterCollector.Spec.ClusterName, clusterCollector.Spec.NsToMonitorRegex, clusterCollector.Spec.NsToExcludeRegex,
-clusterCollector.Spec.ClusterMonEnabled)
+clusterMonitoringEnabled: %t
+log-level: %s
+path: %s
+enabled: %t
+exporter-address: %s
+exporter-port: %d`, CLUSTER_COLLECTOR, TYPE_COLLECTOR, strings.Split(clusterCollector.Spec.Image,":")[1] , clusterCollector.Spec.ClusterName, clusterCollector.Spec.NsToMonitorRegex,
+clusterCollector.Spec.NsToExcludeRegex, clusterCollector.Spec.ClusterMonEnabled, clusterCollector.Spec.LogLevel,
+CLUSTER_COLLECTOR_PATH, true, clusterCollector.Spec.ExporterAddress, clusterCollector.Spec.ExporterPort)
 	cm := &corev1.ConfigMap{}
 	err := r.client.Get(context.TODO(), types.NamespacedName{Name: ClUSTER_MON_CONFIG_NAME, Namespace: clusterCollector.Namespace}, cm)
 

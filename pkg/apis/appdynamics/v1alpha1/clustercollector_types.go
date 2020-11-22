@@ -19,6 +19,8 @@ type ClustercollectorSpec struct {
 	LogLevel           string                      `json:"logLevel,omitempty"`
 	ClusterMonEnabled  bool                        `json:"clusterMonEnabled,omitempty"`
 	SystemConfigs      InfraAgentConfig            `json:"systemConfig,omitempty"`
+	ExporterAddress    string                      `json:"kubeExporterAddress,omitempty"`
+	ExporterPort       int                         `json:"kubeExporterPort,omitempty"`
 }
 
 
