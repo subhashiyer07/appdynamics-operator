@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
+	"strings"
 	"time"
 
 	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
@@ -27,11 +29,15 @@ import (
 
 const (
 	OLD_SPEC string = "cluster-collector-spec"
+	ClUSTER_MON_CONFIG_NAME string = "cluster-collector-config"
+	INFRA_AGENT_CONFIG_NAME string = "infra-agent-config"
+	INFRA_AGENT_NAME string = "Infra Structure Agent"
+	CLUSTER_COLLECTOR string = "Cluster Monitor"
+	TYPE_COLLECTOR string = "Collector"
+	CLUSTER_COLLECTOR_PATH string = "./collectors/cluster-collector-linux-amd64"
 )
 
 var log = logf.Log.WithName("controller_clustercollector")
-
-const ()
 
 // Add creates a new Clustercollector Controller and adds it to the Manager. The Manager will set fields on the Controller
 // and Start it when the Manager is Started.
@@ -106,6 +112,11 @@ func (r *ReconcileClustercollector) Reconcile(request reconcile.Request) (reconc
 		reqLogger.Info("Cluster Collector deployment does not exist. Creating...")
 
 		// Define a new deployment for the cluster collector
+		econfig := r.ensureConfigMap(clusterCollector)
+		if econfig != nil {
+			reqLogger.Error(econfig, "Failed to create new Cluster Collector due to config map", "Deployment.Namespace", clusterCollector.Namespace, "Deployment.Name", clusterCollector.Name)
+			return reconcile.Result{}, econfig
+		}
 		dep := r.newCollectorDeployment(clusterCollector)
 		reqLogger.Info("Creating a new Deployment", "Deployment.Namespace", dep.Namespace, "Deployment.Name", dep.Name)
 		err = r.client.Create(context.TODO(), dep)
@@ -123,6 +134,12 @@ func (r *ReconcileClustercollector) Reconcile(request reconcile.Request) (reconc
 
 	reqLogger.Info("Cluster Collector deployment exists. Checking for deltas with the current state...")
 
+	reqLogger.Info("Retrieving agent config map", "Deployment.Namespace", clusterCollector.Namespace)
+	econfig := r.ensureConfigMap(clusterCollector)
+	if econfig != nil {
+		reqLogger.Error(econfig, "Failed to obtain cluster agent config map", "Deployment.Namespace", clusterCollector.Namespace, "Deployment.Name", clusterCollector.Name)
+		return reconcile.Result{}, econfig
+	}
 	breaking, updateDeployment := r.hasBreakingChanges(clusterCollector, existingDeployment)
 
 	if breaking {
@@ -247,7 +264,39 @@ func (r *ReconcileClustercollector) newCollectorDeployment(clusterCollector *app
 						ImagePullPolicy: corev1.PullAlways,
 						Name:            "cluster-collector",
 						Resources:       clusterCollector.Spec.Resources,
+						VolumeMounts: []corev1.VolumeMount{
+							{
+								Name: "clustermon-config",
+								MountPath: "/opt/appdynamics/InfraAgent/collectors/clustermon.conf",
+								SubPath: "clustermon.conf",
+							},
+							{
+								Name: "infraagent-config",
+								MountPath: "/opt/appdynamics/InfraAgent/agent.conf",
+								SubPath: "agent.conf",
+							},
+						},
 					}},
+					Volumes: []corev1.Volume{
+						{
+							Name: "clustermon-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: ClUSTER_MON_CONFIG_NAME},
+								},
+							},
+						},
+						{
+							Name: "infraagent-config",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: INFRA_AGENT_CONFIG_NAME},
+								},
+							},
+						},
+					},
 				},
 			},
 		},
@@ -259,6 +308,209 @@ func (r *ReconcileClustercollector) newCollectorDeployment(clusterCollector *app
 	// Set Cluster collector instance as the owner and controller
 	controllerutil.SetControllerReference(clusterCollector, dep, r.scheme)
 	return dep
+}
+func (r *ReconcileClustercollector) ensureConfigMap(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
+    setClusterCollectorConfigDefaults(clusterCollector)
+    setInfraAgentConfigsDefaults(clusterCollector)
+    err := r.ensureClusterCollectorConfig(clusterCollector)
+    if err != nil {
+    	return err
+	}
+	err = r.ensureInfraAgentConfig(clusterCollector)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func setClusterCollectorConfigDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
+	if clusterCollector.Spec.LogLevel == "" {
+		clusterCollector.Spec.LogLevel = "INFO"
+	}
+	if clusterCollector.Spec.ExporterAddress == "" {
+		clusterCollector.Spec.ExporterAddress = "127.0.0.1"
+	}
+	if clusterCollector.Spec.ExporterPort == 0 {
+		clusterCollector.Spec.ExporterPort = 9100
+	}
+}
+
+func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
+	if clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl == ""{
+		clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl = "tcp://127.0.0.1"
+	}
+	if clusterCollector.Spec.SystemConfigs.CollectorLibPort == "" {
+		clusterCollector.Spec.SystemConfigs.CollectorLibPort = "42387"
+	}
+	if clusterCollector.Spec.SystemConfigs.ConfigChangeScanPeriod == 0 {
+		clusterCollector.Spec.SystemConfigs.ConfigChangeScanPeriod = 5 //sec
+	}
+	if clusterCollector.Spec.SystemConfigs.HttpBasicAuthEnabled == false {
+		clusterCollector.Spec.SystemConfigs.HttpBasicAuthEnabled = true
+	}
+	if clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod == 0 {
+		clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod = 600  // sec
+	}
+	if clusterCollector.Spec.SystemConfigs.HttpClientTimeOut == 0 {
+		clusterCollector.Spec.SystemConfigs.HttpClientTimeOut = 10000 // ms
+	}
+	if clusterCollector.Spec.SystemConfigs.ClientLibSendUrl == "" {
+		clusterCollector.Spec.SystemConfigs.ClientLibSendUrl = "tcp://127.0.0.1:42387"
+	}
+	if clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl == "" {
+		clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl = "tcp://127.0.0.1:4238"
+	}
+	if clusterCollector.Spec.SystemConfigs.LogLevel == "" {
+		clusterCollector.Spec.SystemConfigs.LogLevel = "INFO"
+	}
+	if clusterCollector.Spec.SystemConfigs.DebugPort == "" {
+		clusterCollector.Spec.SystemConfigs.DebugPort = "39987"
+	}
+}
+func validateControllerUrl(controllerUrl string) (error, string, uint16, string) {
+	if strings.Contains(controllerUrl, "http") {
+		arr := strings.Split(controllerUrl, ":")
+		if len(arr) > 3 || len(arr) < 2 {
+			return fmt.Errorf("Controller Url is invalid. Use this format: protocol://url:port"), "", 0, ""
+		}
+		protocol := arr[0]
+		controllerDns := strings.TrimLeft(arr[1], "//")
+		controllerPort := 0
+		if len(arr) != 3 {
+			if strings.Contains(protocol, "s") {
+				controllerPort = 443
+			} else {
+				controllerPort = 80
+			}
+		} else {
+			port, errPort := strconv.Atoi(arr[2])
+			if errPort != nil {
+				return fmt.Errorf("Controller port is invalid. %v", errPort), "", 0, ""
+			}
+			controllerPort = port
+		}
+
+		ssl := "false"
+		if strings.Contains(protocol, "s") {
+			ssl = "true"
+		}
+		return nil, controllerDns, uint16(controllerPort), ssl
+	} else {
+		return fmt.Errorf("Controller Url is invalid. Use this format: protocol://dns:port"), "", 0, ""
+	}
+}
+
+func (r *ReconcileClustercollector) ensureInfraAgentConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
+	errVal, controllerDns, port, sslEnabled := validateControllerUrl(clusterCollector.Spec.ControllerUrl)
+	if errVal != nil {
+		return errVal
+	}
+	portVal := strconv.Itoa(int(port))
+
+	yml := fmt.Sprintf(`name: %s 
+controller-host: %s
+controller-port: %s
+controller-account-name: %s
+controller-ssl-enabled: %s
+enabled: %t
+controller-access-key: %s
+controller-lib-socket-url: %s
+collector-lib-port: %s
+http-client-timeout: %d
+http-client-basic-auth-enabled: %t
+configuration-change-scan-period: %d
+configuration-stale-grace-period: %d
+debug-port: %s
+client-lib-send-url: %s
+client-lib-recv-url: %s
+log-level: %s
+debug-enabled: %t`, INFRA_AGENT_NAME, controllerDns, portVal, clusterCollector.Spec.Account, sslEnabled, true, clusterCollector.Spec.AccessSecret,
+clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl, clusterCollector.Spec.SystemConfigs.CollectorLibPort,
+clusterCollector.Spec.SystemConfigs.HttpClientTimeOut, clusterCollector.Spec.SystemConfigs.HttpBasicAuthEnabled,
+clusterCollector.Spec.SystemConfigs.ConfigChangeScanPeriod, clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod,
+clusterCollector.Spec.SystemConfigs.DebugPort, clusterCollector.Spec.SystemConfigs.ClientLibSendUrl,
+clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl, clusterCollector.Spec.SystemConfigs.LogLevel, clusterCollector.Spec.SystemConfigs.DebugEnabled)
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: INFRA_AGENT_CONFIG_NAME, Namespace: clusterCollector.Namespace}, cm)
+
+	create := err != nil && errors.IsNotFound(err)
+
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("Unable to load infra agent configMap. %v", err)
+	}
+
+
+
+	cm.Name = INFRA_AGENT_CONFIG_NAME
+	cm.Namespace = clusterCollector.Namespace
+	cm.Data = make(map[string]string)
+	cm.Data["agent.conf"] = string(yml)
+
+	if create {
+		e := r.client.Create(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to create infra agent configMap. %v", e)
+		}
+		fmt.Println("Agent Configmap created")
+	} else {
+		e := r.client.Update(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to update infra agent configMap. %v", e)
+		}
+		fmt.Println("Infra Agent Configmap updated")
+	}
+
+	return nil
+}
+
+func (r *ReconcileClustercollector) ensureClusterCollectorConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
+
+	yml := fmt.Sprintf(`name: %s
+type: %s
+version: %s
+clusterName: %s
+nsToMonitor: %s
+nsToExclude: %s
+clusterMonitoringEnabled: %t
+log-level: %s
+path: %s
+enabled: %t
+exporter-address: %s
+exporter-port: %d`, CLUSTER_COLLECTOR, TYPE_COLLECTOR, strings.Split(clusterCollector.Spec.Image,":")[1] , clusterCollector.Spec.ClusterName, clusterCollector.Spec.NsToMonitorRegex,
+clusterCollector.Spec.NsToExcludeRegex, clusterCollector.Spec.ClusterMonEnabled, clusterCollector.Spec.LogLevel,
+CLUSTER_COLLECTOR_PATH, true, clusterCollector.Spec.ExporterAddress, clusterCollector.Spec.ExporterPort)
+	cm := &corev1.ConfigMap{}
+	err := r.client.Get(context.TODO(), types.NamespacedName{Name: ClUSTER_MON_CONFIG_NAME, Namespace: clusterCollector.Namespace}, cm)
+
+	create := err != nil && errors.IsNotFound(err)
+
+	if err != nil && !errors.IsNotFound(err) {
+		return fmt.Errorf("Unable to load clustermon configMap. %v", err)
+	}
+
+
+
+	cm.Name = ClUSTER_MON_CONFIG_NAME
+	cm.Namespace = clusterCollector.Namespace
+	cm.Data = make(map[string]string)
+    cm.Data["clustermon.conf"] = string(yml)
+
+	if create {
+		e := r.client.Create(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to create clustermon configMap. %v", e)
+		}
+		fmt.Println("Agent Configmap created")
+	} else {
+		e := r.client.Update(context.TODO(), cm)
+		if e != nil {
+			return fmt.Errorf("Unable to update clustermon configMap. %v", e)
+		}
+		fmt.Println("Cluster collector Configmap updated")
+	}
+
+	return nil
+
 }
 
 func saveOrUpdateClusterCollectorSpecAnnotation(clusterCollector *appdynamicsv1alpha1.Clustercollector, dep *appsv1.Deployment) {
