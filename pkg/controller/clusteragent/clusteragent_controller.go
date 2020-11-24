@@ -45,6 +45,7 @@ const (
 	BLOCKLISTED                 string = "blocklisted"
 
 	ENV_INSTRUMENTATION     string = "Env"
+	MATCH_ALL_REGEX         string = ".*"
 	NO_INSTRUMENTATION             = "None"
 	JAVA_LANGUAGE           string = "java"
 	DOTNET_LANGUAGE         string = "dotnetcore"
@@ -933,6 +934,10 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 				clusterAgent.Spec.ImageInfoMap[language] = defaultImageInfoMap[language]
 			}
 		}
+	}
+
+	if clusterAgent.Spec.DefaultInstrumentMatchString == "" {
+		clusterAgent.Spec.DefaultInstrumentMatchString = MATCH_ALL_REGEX
 	}
 
 	if clusterAgent.Spec.DefaultInstrumentationTech == "" {
