@@ -44,6 +44,7 @@ const (
 	BLACKLISTED                 string = "blacklisted"
 
 	ENV_INSTRUMENTATION     string = "Env"
+	MATCH_ALL_REGEX         string = ".*"
 	NO_INSTRUMENTATION             = "None"
 	JAVA_LANGUAGE           string = "java"
 	AppDJavaAttachImage            = "docker.io/appdynamics/java-agent:latest"
@@ -879,6 +880,10 @@ func setInstrumentationAgentDefaults(clusterAgent *appdynamicsv1alpha1.Clusterag
 		} else {
 			clusterAgent.Spec.ImageInfoMap[JAVA_LANGUAGE] = defaultImageInfoMap[JAVA_LANGUAGE]
 		}
+	}
+
+	if clusterAgent.Spec.DefaultInstrumentMatchString == "" {
+		clusterAgent.Spec.DefaultInstrumentMatchString = MATCH_ALL_REGEX
 	}
 
 	if clusterAgent.Spec.DefaultInstrumentationTech == "" {
