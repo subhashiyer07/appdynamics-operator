@@ -21,6 +21,7 @@ type ClustercollectorSpec struct {
 	SystemConfigs      InfraAgentConfig            `json:"systemConfig,omitempty"`
 	ExporterAddress    string                      `json:"kubeExporterAddress,omitempty"`
 	ExporterPort       int                         `json:"kubeExporterPort,omitempty"`
+	HostCollector      HostCollectorConfig         `json:"hostCollectorConfig,omitempty"`
 }
 
 
@@ -36,6 +37,12 @@ type InfraAgentConfig struct {
    LogLevel                 string `json:"logLevel,omitempty"`
    ClientLibSendUrl         string  `json:"clientLibSendUrl,omitempty"`
    ClientLibRecvUrl         string  `json:"clientLibRecvUrl,omitempty"`
+}
+
+type HostCollectorConfig struct {
+	Image              string                      `json:"image,omitempty"`
+	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
+	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 // ClustercollectorStatus defines the observed state of Clustercollector
 type ClustercollectorStatus struct {
