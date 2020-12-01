@@ -68,6 +68,13 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	if err != nil {
 		return err
 	}
+	err = c.Watch(&source.Kind{Type: &appsv1.DaemonSet{}}, &handler.EnqueueRequestForOwner{
+		IsController: true,
+		OwnerType:    &appdynamicsv1alpha1.Clustercollector{},
+	})
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -108,15 +115,18 @@ func (r *ReconcileClustercollector) Reconcile(request reconcile.Request) (reconc
 	}
 
 	reqLogger.Info("Cluster Collector spec exists. Checking the corresponding deployment...")
-	success, err := r.ensureClusterCollectrDeployment(clusterCollector, reqLogger)
-	if !success {
-		return reconcile.Result{}, err
+	reQueueClusterCollector, cErr := r.ensureClusterCollectorDeployment(clusterCollector, reqLogger)
+	reQueueHostCollector, hErr := r.ensureHostCollectorDaemonSet(clusterCollector, reqLogger)
+	if cErr != nil || hErr != nil {
+		return reconcile.Result{}, fmt.Errorf("cluster-collector error: %v, host collector error: %s", cErr, hErr)
+	} else if reQueueClusterCollector || reQueueHostCollector {
+		return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
 	}
 	reqLogger.Info("Exiting reconciliation loop.")
-	return reconcile.Result{RequeueAfter: 60 * time.Second}, nil
+	return reconcile.Result{}, nil
 }
 
-func (r *ReconcileClustercollector) ensureClusterCollectrDeployment(clusterCollector *appdynamicsv1alpha1.Clustercollector, reqLogger logr.Logger) (bool, error){
+func (r *ReconcileClustercollector) ensureClusterCollectorDeployment(clusterCollector *appdynamicsv1alpha1.Clustercollector, reqLogger logr.Logger) (bool, error) {
 	clusterCollectorCtrl := NewClusterCollectorController(r.client, clusterCollector)
 	newDeploymentCreated, err := clusterCollectorCtrl.Init(reqLogger)
 
@@ -129,19 +139,46 @@ func (r *ReconcileClustercollector) ensureClusterCollectrDeployment(clusterColle
 		if err != nil {
 			return false, err
 		}
-	} else {                            // Check if the collector already exists in the namespace
-		reqLogger.Info("Cluster Collector deployment exists. Checking for deltas with the current state...")
-		_, err := clusterCollectorCtrl.Update(reqLogger)
+		return false, nil
+	} // Check if the collector already exists in the namespace
+
+	reqLogger.Info("Cluster Collector deployment exists. Checking for deltas with the current state...")
+	reQueue, err := clusterCollectorCtrl.Update(reqLogger)
+	if err != nil {
+		return false, err
+	}
+	return reQueue, err
+}
+
+func (r *ReconcileClustercollector) ensureHostCollectorDaemonSet(clusterCollector *appdynamicsv1alpha1.Clustercollector, reqLogger logr.Logger) (bool, error) {
+	hostCollectorCtrl := NewHostCollectorController(r.client, clusterCollector)
+	newDaemonSetCreated, err := hostCollectorCtrl.Init(reqLogger)
+
+	ds := hostCollectorCtrl.GetDaemonSet()
+	controllerutil.SetControllerReference(clusterCollector, ds, r.scheme)
+	if err != nil {
+		return false, err
+	} else if newDaemonSetCreated == true {
+		err = hostCollectorCtrl.Create(reqLogger)
 		if err != nil {
 			return false, err
 		}
+		return false, nil
+	} // Check if the collector already exists in the namespace
+
+	reqLogger.Info("Host Collector daemonset exists. Checking for deltas with the current state...")
+	reQueue, err := hostCollectorCtrl.Update(reqLogger)
+	if err != nil {
+		return false, err
 	}
-	return true, nil
+	return reQueue, err
+
 }
 
 func (r *ReconcileClustercollector) ensureConfigMap(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
 	setClusterCollectorConfigDefaults(clusterCollector)
 	setInfraAgentConfigsDefaults(clusterCollector)
+	setHostCollectorConfigDefaults(clusterCollector)
 	err := r.ensureClusterCollectorConfig(clusterCollector)
 	if err != nil {
 		return err

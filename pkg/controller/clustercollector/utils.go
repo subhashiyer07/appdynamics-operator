@@ -65,6 +65,20 @@ func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clusterc
 		clusterCollector.Spec.SystemConfigs.DebugPort = "39987"
 	}
 }
+
+func setHostCollectorConfigDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
+	if clusterCollector.Spec.HostCollector.Image == "" {
+		clusterCollector.Spec.HostCollector.Image = "vikyath/host-collector:latest"
+	}
+
+	if clusterCollector.Spec.HostCollector.ServiceAccountName == "" {
+		clusterCollector.Spec.HostCollector.ServiceAccountName = "appdynamics-operator"
+	}
+	if clusterCollector.Spec.HostCollector.Name == "" {
+		clusterCollector.Spec.HostCollector.Name = HOST_COLLECTOR_NAME
+	}
+}
+
 func validateControllerUrl(controllerUrl string) (error, string, uint16, string) {
 	if strings.Contains(controllerUrl, "http") {
 		arr := strings.Split(controllerUrl, ":")

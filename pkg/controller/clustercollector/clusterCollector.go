@@ -59,7 +59,7 @@ func (c *clusterCollectorController) Create(reqLogger logr.Logger) error {
 
 func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error) {
 	breaking, updateDeployment := hasBreakingChanges(c.clusterCollector, c.deployment)
-
+    reQueue := false
 	existingDeployment := c.deployment
 	clusterCollector := c.clusterCollector
 	if breaking {
@@ -70,20 +70,20 @@ func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error)
 		errUpdate := c.client.Update(context.TODO(), existingDeployment)
 		if errUpdate != nil {
 			reqLogger.Error(errUpdate, "Failed to update cluster collector", "clusterCollector.Namespace", clusterCollector.Namespace, "Deployment.Name", clusterCollector.Name)
-			return false, errUpdate
+			return reQueue, errUpdate
 		}
 
 		errRestart := c.RestartCollector()
 		if errRestart != nil {
 			reqLogger.Error(errRestart, "Failed to restart cluster collector", "clusterCollector.Namespace", clusterCollector.Namespace, "Deployment.Name", clusterCollector.Name)
-			return false, errRestart
+			return reQueue, errRestart
 		}
 	} else if updateDeployment {
 		fmt.Println("Breaking changes detected. Updating the the cluster collector deployment...")
 		err := c.client.Update(context.TODO(), existingDeployment)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update Clustercollector Deployment", "Deployment.Namespace", existingDeployment.Namespace, "Deployment.Name", existingDeployment.Name)
-			return false, err
+			return reQueue, err
 		}
 	} else {
 		reqLogger.Info("No breaking changes.", "clusterCollector.Namespace", clusterCollector.Namespace)
@@ -93,8 +93,10 @@ func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error)
 		} else {
 			reqLogger.Info("Status not updated. Exiting reconciliation loop.")
 		}
+		return reQueue, nil
 	}
-	return true, nil
+	reQueue = true
+	return reQueue, nil
 }
 
 func (c *clusterCollectorController) RestartCollector() error {

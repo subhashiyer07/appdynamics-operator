@@ -1,0 +1,264 @@
+package clustercollector
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
+	"github.com/go-logr/logr"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+)
+const(
+	HOST_COLLECTOR_NAME string = "k8s-host-collector"
+)
+type hostCollectorController struct {
+	client           client.Client
+	clusterCollector *appdynamicsv1alpha1.Clustercollector
+	daemonset       *appsv1.DaemonSet
+}
+
+func NewHostCollectorController (client client.Client, clusterCollector *appdynamicsv1alpha1.Clustercollector) *hostCollectorController {
+	return &hostCollectorController{
+		client: client,
+		clusterCollector: clusterCollector,
+		daemonset: &appsv1.DaemonSet{},
+	}
+}
+func (h *hostCollectorController) GetDaemonSet() *appsv1.DaemonSet {
+	return h.daemonset
+}
+
+func (h *hostCollectorController) Init(reqLogger logr.Logger) (bool, error) {
+	err := h.initialiseDaemonSet()
+	newDaemonSetCreated := false
+	if err != nil && errors.IsNotFound(err) {
+		reqLogger.Info("Cluster Collector daemonset does not exist. Creating...")
+		newDaemonSetCreated = true
+		// Define a new deployment for the cluster collector
+		err = h.newCollectorDaemonSet()
+		return newDaemonSetCreated, err
+	} else if err != nil {
+		reqLogger.Error(err, "Failed to get Daemonset")
+		return newDaemonSetCreated, err
+	}
+	return newDaemonSetCreated, err
+}
+
+func (h *hostCollectorController) Create(reqLogger logr.Logger) error {
+	reqLogger.Info("Creating a new Daemonset", "Daemonset.Namespace", h.daemonset.Namespace, "Daemonset.Name", h.daemonset.Name)
+	err := h.client.Create(context.TODO(), h.daemonset)
+	if err != nil {
+		reqLogger.Error(err, "Failed to create new Daemonset", "Daemonset.Namespace", h.daemonset.Namespace, "Daemonset.Name", h.daemonset.Name)
+		return err
+	}
+	reqLogger.Info("Daemonset created successfully. Done")
+	return nil
+}
+
+func (h *hostCollectorController) Update(reqLogger logr.Logger) (bool, error) {
+	breaking, updateDeployment := h.hasBreakingChanges()
+    reQueue := false
+	existingDaemonSet := h.daemonset
+	clusterCollector := h.clusterCollector
+	if breaking {
+		fmt.Println("Breaking changes detected. Restarting the host collector pod...")
+
+		h.saveOrUpdateHostCollectorSpecAnnotation()
+
+		errUpdate := h.client.Update(context.TODO(), existingDaemonSet)
+		if errUpdate != nil {
+			reqLogger.Error(errUpdate, "Failed to update host collector", "hostCollector.Namespace", clusterCollector.Namespace, "Daemonset.Name", clusterCollector.Name)
+			return reQueue, errUpdate
+		}
+
+		errRestart := h.RestartCollector()
+		if errRestart != nil {
+			reqLogger.Error(errRestart, "Failed to restart host collector", "hostCollector.Namespace", clusterCollector.Namespace, "Daemonset.Name", clusterCollector.Name)
+			return reQueue, errRestart
+		}
+	} else if updateDeployment {
+		fmt.Println("Breaking changes detected. Updating the the host collector deployment...")
+		err := h.client.Update(context.TODO(), existingDaemonSet)
+		if err != nil {
+			reqLogger.Error(err, "Failed to update Hostcollector Daemonset", "Daemonset.Namespace", existingDaemonSet.Namespace, "Daemonset.Name", existingDaemonSet.Name)
+			return reQueue, err
+		}
+	} else {
+		reqLogger.Info("No breaking changes.", "HostCollector.Namespace", clusterCollector.Namespace)
+		statusErr := updateStatus(clusterCollector, h.client)
+		if statusErr == nil {
+			reqLogger.Info("Status updated. Exiting reconciliation loop.")
+		} else {
+			reqLogger.Info("Status not updated. Exiting reconciliation loop.")
+		}
+		return reQueue, nil
+	}
+	reQueue = true
+	return reQueue, nil
+}
+
+func (h *hostCollectorController) RestartCollector() error {
+	podList := &corev1.PodList{}
+	clusterCollector := h.clusterCollector
+	labelSelector := labels.SelectorFromSet(labelsForHostCollector(clusterCollector))
+	listOps := &client.ListOptions{
+		Namespace:     clusterCollector.Namespace,
+		LabelSelector: labelSelector,
+	}
+	err := h.client.List(context.TODO(), listOps, podList)
+	if err != nil || len(podList.Items) < 1 {
+		return fmt.Errorf("Unable to retrieve host-collector pod. %v", err)
+	}
+	pod := podList.Items[0]
+	//delete to force restart
+	err = h.client.Delete(context.TODO(), &pod)
+	if err != nil {
+		return fmt.Errorf("Unable to delete host-collector pod. %v", err)
+	}
+	return nil
+}
+func (h *hostCollectorController) initialiseDaemonSet() error {
+	err := h.client.Get(context.TODO(), types.NamespacedName{Name: HOST_COLLECTOR_NAME,
+		Namespace: h.clusterCollector.Namespace}, h.daemonset)
+	return err
+}
+
+func (h *hostCollectorController) newCollectorDaemonSet() error {
+	trueVal := true
+	clusterCollector := h.clusterCollector
+
+	fmt.Printf("Building DaemonSet spec for image %s\n", clusterCollector.Spec.Image)
+	ls := labelsForHostCollector(clusterCollector)
+	ds := &appsv1.DaemonSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "DaemonSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      clusterCollector.Spec.HostCollector.Name,
+			Namespace: clusterCollector.Namespace,
+		},
+		Spec: appsv1.DaemonSetSpec{
+			Selector: &metav1.LabelSelector{
+				MatchLabels: ls,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: ls,
+				},
+				Spec: corev1.PodSpec{
+					ServiceAccountName: clusterCollector.Spec.HostCollector.ServiceAccountName,
+					Containers: []corev1.Container{{
+						Image:           clusterCollector.Spec.HostCollector.Image,
+						ImagePullPolicy: corev1.PullAlways,
+						Name:            "host-collector",
+						Resources:       clusterCollector.Spec.HostCollector.Resources,
+						SecurityContext: &corev1.SecurityContext{
+							Privileged: &trueVal,
+						},
+						VolumeMounts: []corev1.VolumeMount{{
+							Name:      "proc",
+							MountPath: "/host/proc",
+							ReadOnly:  true,
+						}, {
+							Name:      "var-run",
+							MountPath: "/var/run",
+						}, {
+							Name:      "sys",
+							MountPath: "/sys",
+							ReadOnly:  true,
+						}, {
+							Name:      "root",
+							MountPath: "/rootfs",
+							ReadOnly:  true,
+						}, {
+							Name:      "var-lib-docker",
+							MountPath: "/var/lib/docker/",
+							ReadOnly:  true,
+						}, {
+							Name: "infraagent-config",
+							MountPath: "/opt/appdynamics/InfraAgent/agent.conf",
+							SubPath: "agent.conf",
+						},
+						},
+					}},
+					Volumes: []corev1.Volume{{
+						Name: "proc",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/proc"},
+						},
+					}, {
+						Name: "var-run",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/var/run"},
+						},
+					}, {
+						Name: "sys",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/sys"},
+						},
+					}, {
+						Name: "root",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/"},
+						},
+					}, {
+						Name: "var-lib-docker",
+						VolumeSource: corev1.VolumeSource{
+							HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/docker/"},
+						},
+					},{
+						Name: "infraagent-config",
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: INFRA_AGENT_CONFIG_NAME},
+							},
+						},
+					}},
+				},
+			},
+		},
+	}
+
+	//save the new spec in annotations
+	h.saveOrUpdateHostCollectorSpecAnnotation()
+    h.daemonset = ds
+	// Set Host collector instance as the owner and controller
+	return nil
+}
+
+func (h *hostCollectorController) saveOrUpdateHostCollectorSpecAnnotation() {
+	jsonObj, e := json.Marshal(h.clusterCollector.Spec.HostCollector)
+	if e != nil {
+		log.Error(e, "Unable to serialize the current spec", "clusterCollector.Namespace", h.clusterCollector.Namespace, "clusterCollector.Name", h.clusterCollector.Spec.HostCollector.Name)
+	} else {
+		if h.daemonset.Annotations == nil {
+			h.daemonset.Annotations = make(map[string]string)
+		}
+		h.daemonset.Annotations[OLD_SPEC] = string(jsonObj)
+	}
+}
+
+func labelsForHostCollector(hostCollector *appdynamicsv1alpha1.Clustercollector) map[string]string {
+	return map[string]string{"name": "hostCollector", "hostCollector_cr": hostCollector.Spec.HostCollector.Name}
+}
+
+func (h *hostCollectorController) hasBreakingChanges() (bool, bool) {
+	fmt.Println("Checking for breaking changes...")
+	hostCollectorSpec := h.clusterCollector.Spec.HostCollector
+	existingDaemonSet := h.daemonset
+	if hostCollectorSpec.Image != "" && existingDaemonSet.Spec.Template.Spec.Containers[0].Image != hostCollectorSpec.Image {
+		fmt.Printf("Image changed from has changed: %s	to	%s. Updating....\n", existingDaemonSet.Spec.Template.Spec.Containers[0].Image, hostCollectorSpec.Image)
+		existingDaemonSet.Spec.Template.Spec.Containers[0].Image = hostCollectorSpec.Image
+		return false, true
+	}
+
+	return false, false
+}

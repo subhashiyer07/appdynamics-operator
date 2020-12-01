@@ -40,6 +40,7 @@ type InfraAgentConfig struct {
 }
 
 type HostCollectorConfig struct {
+	Name               string                      `json:"name,omitempty"`
 	Image              string                      `json:"image,omitempty"`
 	ServiceAccountName string                      `json:"serviceAccountName,omitempty"`
 	Resources          corev1.ResourceRequirements `json:"resources,omitempty"`
