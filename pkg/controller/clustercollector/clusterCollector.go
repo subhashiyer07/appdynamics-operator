@@ -2,7 +2,6 @@ package clustercollector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
 	"github.com/go-logr/logr"
@@ -65,7 +64,7 @@ func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error)
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the cluster collector pod...")
 
-		c.saveOrUpdateClusterCollectorSpecAnnotation()
+		saveOrUpdateCollectorSpecAnnotation(c.deployment, c.clusterCollector)
 
 		errUpdate := c.client.Update(context.TODO(), existingDeployment)
 		if errUpdate != nil {
@@ -124,18 +123,6 @@ func (c *clusterCollectorController) initialiseDeployment() error {
 	err := c.client.Get(context.TODO(), types.NamespacedName{Name: c.clusterCollector.Name,
 		Namespace: c.clusterCollector.Namespace}, c.deployment)
 	return err
-}
-
-func (c *clusterCollectorController) saveOrUpdateClusterCollectorSpecAnnotation() {
-	jsonObj, e := json.Marshal(c.clusterCollector)
-	if e != nil {
-		log.Error(e, "Unable to serialize the current spec", "clusterCollector.Namespace", c.clusterCollector.Namespace, "clusterCollector.Name", c.clusterCollector.Name)
-	} else {
-		if c.deployment.Annotations == nil {
-			c.deployment.Annotations = make(map[string]string)
-		}
-		c.deployment.Annotations[OLD_SPEC] = string(jsonObj)
-	}
 }
 
 func (c *clusterCollectorController) newCollectorDeployment() error {
@@ -223,7 +210,7 @@ func (c *clusterCollectorController) newCollectorDeployment() error {
 		},
 	}
 	c.deployment = dep
-	c.saveOrUpdateClusterCollectorSpecAnnotation()
+	saveOrUpdateCollectorSpecAnnotation(c.deployment, c.clusterCollector)
 	return nil
 }
 
@@ -231,6 +218,6 @@ func labelsForClusterCollector(clusterCollector *appdynamicsv1alpha1.Clustercoll
 	return map[string]string{"name": "clusterCollector", "clusterCollector_cr": clusterCollector.Name}
 }
 
-func (c *clusterCollectorController) GetDeployment() *appsv1.Deployment {
+func (c *clusterCollectorController) Get() metav1.Object {
 	return c.deployment
 }

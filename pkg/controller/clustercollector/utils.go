@@ -2,6 +2,7 @@ package clustercollector
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
@@ -163,4 +164,28 @@ func createConfigMap(client client.Client, cm *corev1.ConfigMap) error {
 		fmt.Println("Infra Agent Configmap updated")
 	}
 	return nil
+}
+
+func saveOrUpdateCollectorSpecAnnotation(res metav1.Object, clusterCollector *appdynamicsv1alpha1.Clustercollector) {
+	switch res.(type) {
+	case *appsv1.Deployment:
+		jsonObj, e := json.Marshal(clusterCollector)
+		if e != nil {
+			log.Error(e, "Unable to serialize the current spec", "clusterCollector.Namespace", clusterCollector.Namespace, "clusterCollector.Name", clusterCollector.Name)
+		} else {
+			res.SetAnnotations(map[string]string{
+				OLD_SPEC: string(jsonObj),
+			})
+		}
+	case *appsv1.DaemonSet:
+		jsonObj, e := json.Marshal(clusterCollector.Spec.HostCollector)
+		if e != nil {
+			log.Error(e, "Unable to serialize the current spec", "clusterCollector.Namespace", clusterCollector.Namespace, "clusterCollector.Name", clusterCollector.Spec.HostCollector.Name)
+		} else {
+			res.SetAnnotations(map[string]string{
+				OLD_SPEC: string(jsonObj),
+			})
+		}
+	}
+
 }

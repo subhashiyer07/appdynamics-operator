@@ -2,7 +2,6 @@ package clustercollector
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	appdynamicsv1alpha1 "github.com/Appdynamics/appdynamics-operator/pkg/apis/appdynamics/v1alpha1"
 	"github.com/go-logr/logr"
@@ -14,23 +13,25 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
-const(
+
+const (
 	HOST_COLLECTOR_NAME string = "k8s-host-collector"
 )
+
 type hostCollectorController struct {
 	client           client.Client
 	clusterCollector *appdynamicsv1alpha1.Clustercollector
-	daemonset       *appsv1.DaemonSet
+	daemonset        *appsv1.DaemonSet
 }
 
-func NewHostCollectorController (client client.Client, clusterCollector *appdynamicsv1alpha1.Clustercollector) *hostCollectorController {
+func NewHostCollectorController(client client.Client, clusterCollector *appdynamicsv1alpha1.Clustercollector) *hostCollectorController {
 	return &hostCollectorController{
-		client: client,
+		client:           client,
 		clusterCollector: clusterCollector,
-		daemonset: &appsv1.DaemonSet{},
+		daemonset:        &appsv1.DaemonSet{},
 	}
 }
-func (h *hostCollectorController) GetDaemonSet() *appsv1.DaemonSet {
+func (h *hostCollectorController) Get() metav1.Object {
 	return h.daemonset
 }
 
@@ -63,13 +64,13 @@ func (h *hostCollectorController) Create(reqLogger logr.Logger) error {
 
 func (h *hostCollectorController) Update(reqLogger logr.Logger) (bool, error) {
 	breaking, updateDeployment := h.hasBreakingChanges()
-    reQueue := false
+	reQueue := false
 	existingDaemonSet := h.daemonset
 	clusterCollector := h.clusterCollector
 	if breaking {
 		fmt.Println("Breaking changes detected. Restarting the host collector pod...")
 
-		h.saveOrUpdateHostCollectorSpecAnnotation()
+		saveOrUpdateCollectorSpecAnnotation(h.daemonset, h.clusterCollector)
 
 		errUpdate := h.client.Update(context.TODO(), existingDaemonSet)
 		if errUpdate != nil {
@@ -182,9 +183,9 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 							MountPath: "/var/lib/docker/",
 							ReadOnly:  true,
 						}, {
-							Name: "infraagent-config",
+							Name:      "infraagent-config",
 							MountPath: "/opt/appdynamics/InfraAgent/agent.conf",
-							SubPath: "agent.conf",
+							SubPath:   "agent.conf",
 						},
 						},
 					}},
@@ -213,7 +214,7 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 						VolumeSource: corev1.VolumeSource{
 							HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/docker/"},
 						},
-					},{
+					}, {
 						Name: "infraagent-config",
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
@@ -228,23 +229,12 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 	}
 
 	//save the new spec in annotations
-	h.saveOrUpdateHostCollectorSpecAnnotation()
-    h.daemonset = ds
+	saveOrUpdateCollectorSpecAnnotation(h.daemonset, h.clusterCollector)
+	h.daemonset = ds
 	// Set Host collector instance as the owner and controller
 	return nil
 }
 
-func (h *hostCollectorController) saveOrUpdateHostCollectorSpecAnnotation() {
-	jsonObj, e := json.Marshal(h.clusterCollector.Spec.HostCollector)
-	if e != nil {
-		log.Error(e, "Unable to serialize the current spec", "clusterCollector.Namespace", h.clusterCollector.Namespace, "clusterCollector.Name", h.clusterCollector.Spec.HostCollector.Name)
-	} else {
-		if h.daemonset.Annotations == nil {
-			h.daemonset.Annotations = make(map[string]string)
-		}
-		h.daemonset.Annotations[OLD_SPEC] = string(jsonObj)
-	}
-}
 
 func labelsForHostCollector(hostCollector *appdynamicsv1alpha1.Clustercollector) map[string]string {
 	return map[string]string{"name": "hostCollector", "hostCollector_cr": hostCollector.Spec.HostCollector.Name}
