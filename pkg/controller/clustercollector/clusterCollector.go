@@ -53,6 +53,7 @@ func (c *clusterCollectorController) Create(reqLogger logr.Logger) error {
 		return err
 	}
 	reqLogger.Info("Deployment created successfully. Done")
+	updateStatus(c.clusterCollector, c.client)
 	return nil
 }
 

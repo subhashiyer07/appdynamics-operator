@@ -59,6 +59,7 @@ func (h *hostCollectorController) Create(reqLogger logr.Logger) error {
 		return err
 	}
 	reqLogger.Info("Daemonset created successfully. Done")
+	updateStatus(h.clusterCollector, h.client)
 	return nil
 }
 

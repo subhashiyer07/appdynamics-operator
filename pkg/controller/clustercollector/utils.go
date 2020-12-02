@@ -187,5 +187,4 @@ func saveOrUpdateCollectorSpecAnnotation(res metav1.Object, clusterCollector *ap
 			})
 		}
 	}
-
 }
