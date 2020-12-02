@@ -226,7 +226,10 @@ debug-enabled: %t`, INFRA_AGENT_NAME, controllerDns, portVal, clusterCollector.S
 }
 
 func (r *ReconcileClustercollector) ensureClusterCollectorConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
-
+	version := "latest"
+	if len(strings.Split(clusterCollector.Spec.Image, ":")) > 1 {
+		version = strings.Split(clusterCollector.Spec.Image, ":")[1]
+	}
 	yml := fmt.Sprintf(`name: %s
 type: %s
 version: %s
@@ -238,7 +241,7 @@ log-level: %s
 path: %s
 enabled: %t
 exporter-address: %s
-exporter-port: %d`, CLUSTER_COLLECTOR, TYPE_COLLECTOR, strings.Split(clusterCollector.Spec.Image, ":")[1], clusterCollector.Spec.ClusterName, clusterCollector.Spec.NsToMonitorRegex,
+exporter-port: %d`, CLUSTER_COLLECTOR, TYPE_COLLECTOR, version, clusterCollector.Spec.ClusterName, clusterCollector.Spec.NsToMonitorRegex,
 		clusterCollector.Spec.NsToExcludeRegex, clusterCollector.Spec.ClusterMonEnabled, clusterCollector.Spec.LogLevel,
 		CLUSTER_COLLECTOR_PATH, true, clusterCollector.Spec.ExporterAddress, clusterCollector.Spec.ExporterPort)
 	cm := &corev1.ConfigMap{}
@@ -259,6 +262,11 @@ func (r *ReconcileClustercollector) ensureContainerMonConfig(clusterCollector *a
 		return errVal
 	}
 	portVal := strconv.Itoa(int(port))
+
+	version := "latest"
+	if len(strings.Split(clusterCollector.Spec.Image, ":")) > 1 {
+		version = strings.Split(clusterCollector.Spec.Image, ":")[1]
+	}
 	yml := fmt.Sprintf(`name: %s
 type: %s
 version: %s
@@ -269,7 +277,7 @@ exporter-port: %s
 privileged: %t
 dependency: %s
 install-dependency: %t
-log-level: %s`, CONTAINER_MON, TYPE_COLLECTOR, strings.Split(hostCollectorConfig.Image, ":")[1], hostCollectorConfig.ContainerCollectorPath,
+log-level: %s`, CONTAINER_MON, TYPE_COLLECTOR, version, hostCollectorConfig.ContainerCollectorPath,
 		true, exporterAddr, portVal, false, hostCollectorConfig.ContainerCollectorDependency, true, hostCollectorConfig.LogLevel)
 
 	cm := &corev1.ConfigMap{}
@@ -290,6 +298,11 @@ func (r *ReconcileClustercollector) ensureServerMonConfig(clusterCollector *appd
 		return errVal
 	}
 	portVal := strconv.Itoa(int(port))
+	version := "latest"
+	if len(strings.Split(clusterCollector.Spec.Image, ":")) > 1 {
+		version = strings.Split(clusterCollector.Spec.Image, ":")[1]
+	}
+
 	yml := fmt.Sprintf(`name: %s
 type: %s
 version: %s
@@ -300,7 +313,7 @@ exporter-port: %s
 privileged: %t
 dependency: %s
 install-dependency: %t
-log-level: %s`, SERVER_MON, TYPE_COLLECTOR, strings.Split(hostCollectorConfig.Image, ":")[1], hostCollectorConfig.ServerCollectorPath,
+log-level: %s`, SERVER_MON, TYPE_COLLECTOR, version, hostCollectorConfig.ServerCollectorPath,
 		true, exporterAddr, portVal, false, hostCollectorConfig.ServerCollectorDependency, true, hostCollectorConfig.LogLevel)
 
 	cm := &corev1.ConfigMap{}

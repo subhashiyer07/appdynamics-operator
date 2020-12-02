@@ -155,14 +155,41 @@ func validateUrl(controllerUrl string) (error, string, uint16, string) {
 	}
 }
 
-func hasBreakingChanges(clusterCollector *appdynamicsv1alpha1.Clustercollector, existingDeployment *appsv1.Deployment) (bool, bool) {
+func hasBreakingChanges(clusterCollector *appdynamicsv1alpha1.Clustercollector, res metav1.Object, podTemplateSpec *corev1.PodTemplateSpec) (bool, bool) {
+	breakingChanges := false
+	updateDeployment := false
+	annotations := res.GetAnnotations()
 	fmt.Println("Checking for breaking changes...")
-	if clusterCollector.Spec.Image != "" && existingDeployment.Spec.Template.Spec.Containers[0].Image != clusterCollector.Spec.Image {
-		fmt.Printf("Image changed from has changed: %s	to	%s. Updating....\n", existingDeployment.Spec.Template.Spec.Containers[0].Image, clusterCollector.Spec.Image)
-		existingDeployment.Spec.Template.Spec.Containers[0].Image = clusterCollector.Spec.Image
+
+	if annotations != nil {
+		if oldJson, ok := annotations[OLD_SPEC]; ok && oldJson != "" {
+			var oldSpec appdynamicsv1alpha1.Clustercollector
+			errJson := json.Unmarshal([]byte(oldJson), &oldSpec)
+			if errJson != nil {
+				log.Error(errJson, "Unable to retrieve the old spec from annotations", "clusterAgent.Namespace", clusterCollector.Namespace, "clusterAgent.Name", clusterCollector.Name)
+			}
+
+			if oldSpec.Spec.ControllerUrl != clusterCollector.Spec.ControllerUrl || oldSpec.Spec.Account != clusterCollector.Spec.Account {
+				breakingChanges = true
+			}
+		}
+	}
+	var collectorImage string
+	switch res.(type) {
+	case *appsv1.Deployment:
+		collectorImage = clusterCollector.Spec.Image
+		fmt.Printf("old-spec:%s\n", annotations[OLD_SPEC])
+	case *appsv1.DaemonSet:
+		collectorImage = clusterCollector.Spec.HostCollector.Image
+		fmt.Printf("old-spec:%s\n", annotations[OLD_SPEC])
+	}
+	if collectorImage != "" && podTemplateSpec.Spec.Containers[0].Image != collectorImage {
+		fmt.Printf("Image changed from: %s	to	%s. Updating....\n", podTemplateSpec.Spec.Containers[0].Image, collectorImage)
+		podTemplateSpec.Spec.Containers[0].Image = collectorImage
 		return false, true
 	}
-	return false, false
+
+	return breakingChanges, updateDeployment
 }
 
 func updateStatus(clusterCollector *appdynamicsv1alpha1.Clustercollector, client client.Client) error {
@@ -220,7 +247,7 @@ func saveOrUpdateCollectorSpecAnnotation(res metav1.Object, clusterCollector *ap
 			})
 		}
 	case *appsv1.DaemonSet:
-		jsonObj, e := json.Marshal(clusterCollector.Spec.HostCollector)
+		jsonObj, e := json.Marshal(clusterCollector)
 		if e != nil {
 			log.Error(e, "Unable to serialize the current spec", "clusterCollector.Namespace", clusterCollector.Namespace, "clusterCollector.Name", clusterCollector.Spec.HostCollector.Name)
 		} else {

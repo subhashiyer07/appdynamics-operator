@@ -63,7 +63,7 @@ func (c *clusterCollectorController) Create(reqLogger logr.Logger) error {
 }
 
 func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error) {
-	breaking, updateDeployment := hasBreakingChanges(c.clusterCollector, c.deployment)
+	breaking, updateDeployment := hasBreakingChanges(c.clusterCollector, c.deployment, &c.deployment.Spec.Template)
 	reQueue := false
 	existingDeployment := c.deployment
 	clusterCollector := c.clusterCollector
@@ -84,7 +84,7 @@ func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error)
 			return reQueue, errRestart
 		}
 	} else if updateDeployment {
-		fmt.Println("Breaking changes detected. Updating the the cluster collector deployment...")
+		fmt.Println("Non-Breaking changes detected. Updating the the cluster collector deployment...")
 		err := c.client.Update(context.TODO(), existingDeployment)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update Clustercollector Deployment", "Deployment.Namespace", existingDeployment.Namespace, "Deployment.Name", existingDeployment.Name)

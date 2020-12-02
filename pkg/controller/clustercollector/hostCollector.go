@@ -72,7 +72,7 @@ func (h *hostCollectorController) Create(reqLogger logr.Logger) error {
 }
 
 func (h *hostCollectorController) Update(reqLogger logr.Logger) (bool, error) {
-	breaking, updateDeployment := h.hasBreakingChanges()
+	breaking, updateDeployment := hasBreakingChanges(h.clusterCollector, h.daemonset, &h.daemonset.Spec.Template)
 	reQueue := false
 	existingDaemonSet := h.daemonset
 	clusterCollector := h.clusterCollector
@@ -93,7 +93,7 @@ func (h *hostCollectorController) Update(reqLogger logr.Logger) (bool, error) {
 			return reQueue, errRestart
 		}
 	} else if updateDeployment {
-		fmt.Println("Breaking changes detected. Updating the the host collector deployment...")
+		fmt.Println("Non-Breaking changes detected. Updating the the host collector deployment...")
 		err := h.client.Update(context.TODO(), existingDaemonSet)
 		if err != nil {
 			reqLogger.Error(err, "Failed to update Hostcollector Daemonset", "Daemonset.Namespace", existingDaemonSet.Namespace, "Daemonset.Name", existingDaemonSet.Name)
@@ -273,17 +273,4 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 
 func labelsForHostCollector(hostCollector *appdynamicsv1alpha1.Clustercollector) map[string]string {
 	return map[string]string{"name": "hostCollector", "hostCollector_cr": hostCollector.Spec.HostCollector.Name}
-}
-
-func (h *hostCollectorController) hasBreakingChanges() (bool, bool) {
-	fmt.Println("Checking for breaking changes...")
-	hostCollectorSpec := h.clusterCollector.Spec.HostCollector
-	existingDaemonSet := h.daemonset
-	if hostCollectorSpec.Image != "" && existingDaemonSet.Spec.Template.Spec.Containers[0].Image != hostCollectorSpec.Image {
-		fmt.Printf("Image changed from has changed: %s	to	%s. Updating....\n", existingDaemonSet.Spec.Template.Spec.Containers[0].Image, hostCollectorSpec.Image)
-		existingDaemonSet.Spec.Template.Spec.Containers[0].Image = hostCollectorSpec.Image
-		return false, true
-	}
-
-	return false, false
 }
