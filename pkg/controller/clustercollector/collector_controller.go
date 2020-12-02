@@ -24,13 +24,17 @@ import (
 )
 
 const (
-	OLD_SPEC                string = "cluster-collector-spec"
-	ClUSTER_MON_CONFIG_NAME string = "cluster-collector-config"
-	INFRA_AGENT_CONFIG_NAME string = "infra-agent-config"
-	INFRA_AGENT_NAME        string = "Infra Structure Agent"
-	CLUSTER_COLLECTOR       string = "Cluster Monitor"
-	TYPE_COLLECTOR          string = "Collector"
-	CLUSTER_COLLECTOR_PATH  string = "./collectors/cluster-collector-linux-amd64"
+	OLD_SPEC                      string = "cluster-collector-spec"
+	ClUSTER_MON_CONFIG_MAP_NAME   string = "cluster-collector-config"
+	INFRA_AGENT_CONFIG_MAP_NAME   string = "infra-agent-config"
+	INFRA_AGENT_NAME              string = "Infra Structure Agent"
+	CLUSTER_COLLECTOR             string = "Cluster Monitor"
+	TYPE_COLLECTOR                string = "Collector"
+	CLUSTER_COLLECTOR_PATH        string = "./collectors/cluster-collector-linux-amd64"
+	CONTAINER_MON                 string = "Container Monitor"
+	CONTAINER_MON_CONFIG_MAP_NAME string = "container-collector-config"
+	SERVER_MON                    string = "Server Monitor"
+	SERVER_MON_CONFIG_MAP_NAME    string = "server-collector-config"
 )
 
 var log = logf.Log.WithName("controller_clustercollector")
@@ -169,11 +173,19 @@ func (r *ReconcileClustercollector) ensureConfigMap(clusterCollector *appdynamic
 	if err != nil {
 		return err
 	}
+	err = r.ensureContainerMonConfig(clusterCollector)
+	if err != nil {
+		return err
+	}
+	err = r.ensureServerMonConfig(clusterCollector)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (r *ReconcileClustercollector) ensureInfraAgentConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
-	errVal, controllerDns, port, sslEnabled := validateControllerUrl(clusterCollector.Spec.ControllerUrl)
+	errVal, controllerDns, port, sslEnabled := validateUrl(clusterCollector.Spec.ControllerUrl)
 	if errVal != nil {
 		return errVal
 	}
@@ -204,10 +216,10 @@ debug-enabled: %t`, INFRA_AGENT_NAME, controllerDns, portVal, clusterCollector.S
 		clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl, clusterCollector.Spec.SystemConfigs.LogLevel, clusterCollector.Spec.SystemConfigs.DebugEnabled)
 
 	cm := &corev1.ConfigMap{}
-	cm.Name = INFRA_AGENT_CONFIG_NAME
+	cm.Name = INFRA_AGENT_CONFIG_MAP_NAME
 	cm.Namespace = clusterCollector.Namespace
 	cm.Data = make(map[string]string)
-	cm.Data["agent.conf"] = string(yml)
+	cm.Data[INFRA_AGENT_CONFIG_FILE_NAME] = string(yml)
 
 	err := createConfigMap(r.client, cm)
 	return err
@@ -230,10 +242,72 @@ exporter-port: %d`, CLUSTER_COLLECTOR, TYPE_COLLECTOR, strings.Split(clusterColl
 		clusterCollector.Spec.NsToExcludeRegex, clusterCollector.Spec.ClusterMonEnabled, clusterCollector.Spec.LogLevel,
 		CLUSTER_COLLECTOR_PATH, true, clusterCollector.Spec.ExporterAddress, clusterCollector.Spec.ExporterPort)
 	cm := &corev1.ConfigMap{}
-	cm.Name = ClUSTER_MON_CONFIG_NAME
+	cm.Name = ClUSTER_MON_CONFIG_MAP_NAME
 	cm.Namespace = clusterCollector.Namespace
 	cm.Data = make(map[string]string)
 	cm.Data["clustermon.conf"] = string(yml)
+
+	err := createConfigMap(r.client, cm)
+	return err
+}
+
+func (r *ReconcileClustercollector) ensureContainerMonConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
+
+	hostCollectorConfig := clusterCollector.Spec.HostCollector
+	errVal, exporterAddr, port, _ := validateUrl(hostCollectorConfig.ContainerMetricExporterAddress)
+	if errVal != nil {
+		return errVal
+	}
+	portVal := strconv.Itoa(int(port))
+	yml := fmt.Sprintf(`name: %s
+type: %s
+version: %s
+path: %s
+enabled: %t
+exporter-address: %s
+exporter-port: %s
+privileged: %t
+dependency: %s
+install-dependency: %t
+log-level: %s`, CONTAINER_MON, TYPE_COLLECTOR, strings.Split(hostCollectorConfig.Image, ":")[1], hostCollectorConfig.ContainerCollectorPath,
+		true, exporterAddr, portVal, false, hostCollectorConfig.ContainerCollectorDependency, true, hostCollectorConfig.LogLevel)
+
+	cm := &corev1.ConfigMap{}
+	cm.Name = CONTAINER_MON_CONFIG_MAP_NAME
+	cm.Namespace = clusterCollector.Namespace
+	cm.Data = make(map[string]string)
+	cm.Data[CONTAINER_MON_CONFIG_FILE_NAME] = string(yml)
+
+	err := createConfigMap(r.client, cm)
+	return err
+
+}
+
+func (r *ReconcileClustercollector) ensureServerMonConfig(clusterCollector *appdynamicsv1alpha1.Clustercollector) error {
+	hostCollectorConfig := clusterCollector.Spec.HostCollector
+	errVal, exporterAddr, port, _ := validateUrl(hostCollectorConfig.ContainerMetricExporterAddress)
+	if errVal != nil {
+		return errVal
+	}
+	portVal := strconv.Itoa(int(port))
+	yml := fmt.Sprintf(`name: %s
+type: %s
+version: %s
+path: %s
+enabled: %t
+exporter-address: %s
+exporter-port: %s
+privileged: %t
+dependency: %s
+install-dependency: %t
+log-level: %s`, SERVER_MON, TYPE_COLLECTOR, strings.Split(hostCollectorConfig.Image, ":")[1], hostCollectorConfig.ServerCollectorPath,
+		true, exporterAddr, portVal, false, hostCollectorConfig.ServerCollectorDependency, true, hostCollectorConfig.LogLevel)
+
+	cm := &corev1.ConfigMap{}
+	cm.Name = SERVER_MON_CONFIG_MAP_NAME
+	cm.Namespace = clusterCollector.Namespace
+	cm.Data = make(map[string]string)
+	cm.Data[SERVER_MON_CONFIG_FILE_NAME] = string(yml)
 
 	err := createConfigMap(r.client, cm)
 	return err

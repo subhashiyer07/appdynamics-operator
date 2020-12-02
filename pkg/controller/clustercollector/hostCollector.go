@@ -15,7 +15,15 @@ import (
 )
 
 const (
-	HOST_COLLECTOR_NAME string = "k8s-host-collector"
+	HOST_COLLECTOR_NAME            string = "k8s-host-collector"
+	INFRA_AGENT_VOLUME_NAME        string = "infraagent-config"
+	CONTAINER_MON_VOLUME_NAME      string = "containermon-config"
+	SERVER_MON_VOLUME_NAME         string = "servermon-config"
+	INFRA_AGENT_HOME_PATH          string = "/opt/appdynamics/InfraAgent"
+	INFRA_AGENT_CONFIG_FILE_NAME   string = "agent.conf"
+	COLLECTOR_PATH                 string = "/opt/appdynamics/InfraAgent/collectors"
+	CONTAINER_MON_CONFIG_FILE_NAME string = "containermon.conf"
+	SERVER_MON_CONFIG_FILE_NAME    string = "servermon.conf"
 )
 
 type hostCollectorController struct {
@@ -184,9 +192,17 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 							MountPath: "/var/lib/docker/",
 							ReadOnly:  true,
 						}, {
-							Name:      "infraagent-config",
-							MountPath: "/opt/appdynamics/InfraAgent/agent.conf",
-							SubPath:   "agent.conf",
+							Name:      INFRA_AGENT_VOLUME_NAME,
+							MountPath: fmt.Sprintf("%s/%s", INFRA_AGENT_HOME_PATH, INFRA_AGENT_CONFIG_FILE_NAME),
+							SubPath:   INFRA_AGENT_CONFIG_FILE_NAME,
+						}, {
+							Name:      CONTAINER_MON_VOLUME_NAME,
+							MountPath: fmt.Sprintf("%s/%s", COLLECTOR_PATH, CONTAINER_MON_CONFIG_FILE_NAME),
+							SubPath:   CONTAINER_MON_CONFIG_FILE_NAME,
+						}, {
+							Name:      SERVER_MON_VOLUME_NAME,
+							MountPath: fmt.Sprintf("%s/%s", COLLECTOR_PATH, SERVER_MON_CONFIG_FILE_NAME),
+							SubPath:   SERVER_MON_CONFIG_FILE_NAME,
 						},
 						},
 					}},
@@ -216,11 +232,30 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 							HostPath: &corev1.HostPathVolumeSource{Path: "/var/lib/docker/"},
 						},
 					}, {
-						Name: "infraagent-config",
+						Name: INFRA_AGENT_VOLUME_NAME,
 						VolumeSource: corev1.VolumeSource{
 							ConfigMap: &corev1.ConfigMapVolumeSource{
 								LocalObjectReference: corev1.LocalObjectReference{
-									Name: INFRA_AGENT_CONFIG_NAME},
+									Name: INFRA_AGENT_CONFIG_MAP_NAME,
+								},
+							},
+						},
+					}, {
+						Name: CONTAINER_MON_VOLUME_NAME,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: CONTAINER_MON_CONFIG_MAP_NAME,
+								},
+							},
+						},
+					}, {
+						Name: SERVER_MON_VOLUME_NAME,
+						VolumeSource: corev1.VolumeSource{
+							ConfigMap: &corev1.ConfigMapVolumeSource{
+								LocalObjectReference: corev1.LocalObjectReference{
+									Name: SERVER_MON_CONFIG_MAP_NAME,
+								},
 							},
 						},
 					}},
@@ -235,7 +270,6 @@ func (h *hostCollectorController) newCollectorDaemonSet() error {
 	// Set Host collector instance as the owner and controller
 	return nil
 }
-
 
 func labelsForHostCollector(hostCollector *appdynamicsv1alpha1.Clustercollector) map[string]string {
 	return map[string]string{"name": "hostCollector", "hostCollector_cr": hostCollector.Spec.HostCollector.Name}

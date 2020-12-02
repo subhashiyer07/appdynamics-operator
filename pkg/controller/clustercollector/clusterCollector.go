@@ -14,6 +14,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+const (
+	CLUSTER_MON_VOLUME_NAME      string = "clustermon-config"
+	CLUSTER_MON_CONFIG_FILE_NAME string = "clustermon.conf"
+)
+
 type clusterCollectorController struct {
 	client           client.Client
 	clusterCollector *appdynamicsv1alpha1.Clustercollector
@@ -59,7 +64,7 @@ func (c *clusterCollectorController) Create(reqLogger logr.Logger) error {
 
 func (c *clusterCollectorController) Update(reqLogger logr.Logger) (bool, error) {
 	breaking, updateDeployment := hasBreakingChanges(c.clusterCollector, c.deployment)
-    reQueue := false
+	reQueue := false
 	existingDeployment := c.deployment
 	clusterCollector := c.clusterCollector
 	if breaking {
@@ -175,33 +180,33 @@ func (c *clusterCollectorController) newCollectorDeployment() error {
 						Resources:       c.clusterCollector.Spec.Resources,
 						VolumeMounts: []corev1.VolumeMount{
 							{
-								Name:      "clustermon-config",
-								MountPath: "/opt/appdynamics/InfraAgent/collectors/clustermon.conf",
-								SubPath:   "clustermon.conf",
+								Name:      CLUSTER_MON_VOLUME_NAME,
+								MountPath: fmt.Sprintf("%s/%s", COLLECTOR_PATH, CLUSTER_MON_CONFIG_FILE_NAME),
+								SubPath:   CLUSTER_MON_CONFIG_FILE_NAME,
 							},
 							{
-								Name:      "infraagent-config",
-								MountPath: "/opt/appdynamics/InfraAgent/agent.conf",
-								SubPath:   "agent.conf",
+								Name:      INFRA_AGENT_VOLUME_NAME,
+								MountPath: fmt.Sprintf("%s/%s", INFRA_AGENT_HOME_PATH, INFRA_AGENT_CONFIG_FILE_NAME),
+								SubPath:   INFRA_AGENT_CONFIG_FILE_NAME,
 							},
 						},
 					}},
 					Volumes: []corev1.Volume{
 						{
-							Name: "clustermon-config",
+							Name: CLUSTER_MON_VOLUME_NAME,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: ClUSTER_MON_CONFIG_NAME},
+										Name: ClUSTER_MON_CONFIG_MAP_NAME},
 								},
 							},
 						},
 						{
-							Name: "infraagent-config",
+							Name: INFRA_AGENT_VOLUME_NAME,
 							VolumeSource: corev1.VolumeSource{
 								ConfigMap: &corev1.ConfigMapVolumeSource{
 									LocalObjectReference: corev1.LocalObjectReference{
-										Name: INFRA_AGENT_CONFIG_NAME},
+										Name: INFRA_AGENT_CONFIG_MAP_NAME},
 								},
 							},
 						},

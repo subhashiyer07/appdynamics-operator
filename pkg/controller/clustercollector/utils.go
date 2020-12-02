@@ -15,16 +15,29 @@ import (
 	"strings"
 )
 
+const (
+	CONTAINER_COLLECTOR_PATH               string = "./collectors/containermon-collector-linux-amd64"
+	SERVER_COLLECTOR_PATH                  string = "./collectors/servermon-collector-linux-amd64"
+	DEFAULT_CONTAINER_METRIC_EXPORTER_ADDR string = "http://127.0.0.1:8080"
+	DEFAULT_SERVER_METRIC_EXPORTER_ADDR    string = "http://127.0.0.1:9100"
+	DEFAULT_LOG_LEVEL                             = "INFO"
+	CONTAINER_COLLECTOR_DEPENDENCY                = "/third_party/cadvisor"
+	SERVER_COLLECTOR_DEPENDENCY                   = "/third_party/node_exporter/node_exporter"
+	DEFAULT_SERVICE_ACCOUNT                       = "appdynamics-operator"
+	DEFAULT_CLUSTER_COLLECTOR_IMAGE               = "vikyath/infra-agent-cluster-collector:latest"
+	DEFAULT_HOST_COLLECTOR_IMAGE                  = "vikyath/host-collector:latest"
+)
+
 func setClusterCollectorConfigDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
 
 	if clusterCollector.Spec.Image == "" {
-		clusterCollector.Spec.Image = "vikyath/infra-agent-cluster-collector:latest"
+		clusterCollector.Spec.Image = DEFAULT_CLUSTER_COLLECTOR_IMAGE
 	}
 	if clusterCollector.Spec.ServiceAccountName == "" {
-		clusterCollector.Spec.ServiceAccountName = "appdynamics-operator"
+		clusterCollector.Spec.ServiceAccountName = DEFAULT_SERVICE_ACCOUNT
 	}
 	if clusterCollector.Spec.LogLevel == "" {
-		clusterCollector.Spec.LogLevel = "INFO"
+		clusterCollector.Spec.LogLevel = DEFAULT_LOG_LEVEL
 	}
 	if clusterCollector.Spec.ExporterAddress == "" {
 		clusterCollector.Spec.ExporterAddress = "127.0.0.1"
@@ -35,7 +48,7 @@ func setClusterCollectorConfigDefaults(clusterCollector *appdynamicsv1alpha1.Clu
 }
 
 func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
-	if clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl == ""{
+	if clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl == "" {
 		clusterCollector.Spec.SystemConfigs.CollectorLibSocketUrl = "tcp://127.0.0.1"
 	}
 	if clusterCollector.Spec.SystemConfigs.CollectorLibPort == "" {
@@ -48,7 +61,7 @@ func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clusterc
 		clusterCollector.Spec.SystemConfigs.HttpBasicAuthEnabled = true
 	}
 	if clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod == 0 {
-		clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod = 600  // sec
+		clusterCollector.Spec.SystemConfigs.ConfigStaleGracePeriod = 600 // sec
 	}
 	if clusterCollector.Spec.SystemConfigs.HttpClientTimeOut == 0 {
 		clusterCollector.Spec.SystemConfigs.HttpClientTimeOut = 10000 // ms
@@ -57,10 +70,10 @@ func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clusterc
 		clusterCollector.Spec.SystemConfigs.ClientLibSendUrl = "tcp://127.0.0.1:42387"
 	}
 	if clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl == "" {
-		clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl = "tcp://127.0.0.1:4238"
+		clusterCollector.Spec.SystemConfigs.ClientLibRecvUrl = "tcp://127.0.0.1:42388"
 	}
 	if clusterCollector.Spec.SystemConfigs.LogLevel == "" {
-		clusterCollector.Spec.SystemConfigs.LogLevel = "INFO"
+		clusterCollector.Spec.SystemConfigs.LogLevel = DEFAULT_LOG_LEVEL
 	}
 	if clusterCollector.Spec.SystemConfigs.DebugPort == "" {
 		clusterCollector.Spec.SystemConfigs.DebugPort = "39987"
@@ -69,18 +82,47 @@ func setInfraAgentConfigsDefaults(clusterCollector *appdynamicsv1alpha1.Clusterc
 
 func setHostCollectorConfigDefaults(clusterCollector *appdynamicsv1alpha1.Clustercollector) {
 	if clusterCollector.Spec.HostCollector.Image == "" {
-		clusterCollector.Spec.HostCollector.Image = "vikyath/host-collector:latest"
+		clusterCollector.Spec.HostCollector.Image = DEFAULT_HOST_COLLECTOR_IMAGE
 	}
 
 	if clusterCollector.Spec.HostCollector.ServiceAccountName == "" {
-		clusterCollector.Spec.HostCollector.ServiceAccountName = "appdynamics-operator"
+		clusterCollector.Spec.HostCollector.ServiceAccountName = clusterCollector.Spec.ServiceAccountName
 	}
 	if clusterCollector.Spec.HostCollector.Name == "" {
 		clusterCollector.Spec.HostCollector.Name = HOST_COLLECTOR_NAME
 	}
+
+	if clusterCollector.Spec.HostCollector.ContainerMetricExporterAddress == "" {
+		clusterCollector.Spec.HostCollector.ContainerMetricExporterAddress = DEFAULT_CONTAINER_METRIC_EXPORTER_ADDR
+	}
+
+	if clusterCollector.Spec.HostCollector.ServerMetricExporterAddress == "" {
+		clusterCollector.Spec.HostCollector.ServerMetricExporterAddress = DEFAULT_SERVER_METRIC_EXPORTER_ADDR
+	}
+
+	if clusterCollector.Spec.HostCollector.ContainerCollectorPath == "" {
+		clusterCollector.Spec.HostCollector.ContainerCollectorPath = CONTAINER_COLLECTOR_PATH
+	}
+
+	if clusterCollector.Spec.HostCollector.ServerCollectorPath == "" {
+		clusterCollector.Spec.HostCollector.ServerCollectorPath = SERVER_COLLECTOR_PATH
+	}
+
+	if clusterCollector.Spec.HostCollector.LogLevel == "" {
+		clusterCollector.Spec.HostCollector.LogLevel = DEFAULT_LOG_LEVEL
+	}
+
+	if clusterCollector.Spec.HostCollector.ContainerCollectorDependency == "" {
+		clusterCollector.Spec.HostCollector.ContainerCollectorDependency = CONTAINER_COLLECTOR_DEPENDENCY
+	}
+
+	if clusterCollector.Spec.HostCollector.ServerCollectorDependency == "" {
+		clusterCollector.Spec.HostCollector.ServerCollectorDependency = SERVER_COLLECTOR_DEPENDENCY
+	}
+
 }
 
-func validateControllerUrl(controllerUrl string) (error, string, uint16, string) {
+func validateUrl(controllerUrl string) (error, string, uint16, string) {
 	if strings.Contains(controllerUrl, "http") {
 		arr := strings.Split(controllerUrl, ":")
 		if len(arr) > 3 || len(arr) < 2 {
@@ -141,7 +183,7 @@ func updateStatus(clusterCollector *appdynamicsv1alpha1.Clustercollector, client
 }
 
 func createConfigMap(client client.Client, cm *corev1.ConfigMap) error {
-    existingConfigMap := &corev1.ConfigMap{}
+	existingConfigMap := &corev1.ConfigMap{}
 	err := client.Get(context.TODO(), types.NamespacedName{Name: cm.Name, Namespace: cm.Namespace}, existingConfigMap)
 
 	create := err != nil && errors.IsNotFound(err)
