@@ -643,7 +643,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 
 	resRequirements := corev1.ResourceRequirements{Requests: resRequest, Limits: resLimit}
 
-	if len(clusterAgent.Spec.Resources.Limits) == 0 && len(clusterAgent.Spec.Resources.Requests) == 0  {
+	if len(clusterAgent.Spec.Resources.Limits) == 0 && len(clusterAgent.Spec.Resources.Requests) == 0 {
 		clusterAgent.Spec.Resources = resRequirements
 	}
 
@@ -787,7 +787,7 @@ func (r *ReconcileClusteragent) newAgentDeployment(clusterAgent *appdynamicsv1al
 	}
 
 	customSSLSecret := corev1.EnvVar{
-		Name: "APPDYNAMICS_CUSTOM_SSL_SECRET",
+		Name:  "APPDYNAMICS_CUSTOM_SSL_SECRET",
 		Value: clusterAgent.Spec.CustomSSLSecret,
 	}
 	dep.Spec.Template.Spec.Containers[0].Env = append(dep.Spec.Template.Spec.Containers[0].Env, customSSLSecret)
@@ -968,8 +968,12 @@ func setInstrumentationRuleDefault(clusterAgent *appdynamicsv1alpha1.Clusteragen
 			clusterAgent.Spec.InstrumentationRules[i].EnvToUse = clusterAgent.Spec.DefaultEnv
 		}
 
-		if clusterAgent.Spec.InstrumentationRules[i].LabelMatch == nil {
-			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = make([]map[string]string, 0)
+		if len(clusterAgent.Spec.InstrumentationRules[i].LabelMatch) == 0 {
+			clusterAgent.Spec.InstrumentationRules[i].LabelMatch = clusterAgent.Spec.DefaultLabelMatch
+		}
+
+		if clusterAgent.Spec.InstrumentationRules[i].MatchString == "" {
+			clusterAgent.Spec.InstrumentationRules[i].MatchString = clusterAgent.Spec.DefaultInstrumentMatchString
 		}
 
 		if clusterAgent.Spec.InstrumentationRules[i].Language == "" {
@@ -1194,8 +1198,8 @@ func customAgentConfigsToArrayMap(customConfigs []appdynamicsv1alpha1.CustomConf
 	out := make([]map[string]string, 0)
 	for _, customConfig := range customConfigs {
 		out = append(out, map[string]string{
-			"config-map-name":      customConfig.ConfigMapName,
-			"sub-dir":              customConfig.SubDir,
+			"config-map-name": customConfig.ConfigMapName,
+			"sub-dir":         customConfig.SubDir,
 		})
 	}
 	return out
